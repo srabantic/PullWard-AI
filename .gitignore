@@ -1,0 +1,15 @@
+# Environment variables
+.env
+*.env
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Credentials & secrets
+*.json
+*.pem
+*.key
