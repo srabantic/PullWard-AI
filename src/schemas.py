@@ -37,6 +37,6 @@ def create_bigquery_tables(project_id: str, dataset_id: str = "pullward_audit") 
     print(f"Table '{table_reference.dataset_id}.{table_reference.table_id}' initialized successfully.")
 
 if __name__ == "__main__":
-    gcp_project = os.getenv("CGP_PROJECT_ID", "pullward-ai")
+    gcp_project = os.getenv("GCP_PROJECT_ID", "pullward-ai")
     create_bigquery_tables(project_id=gcp_project)
     

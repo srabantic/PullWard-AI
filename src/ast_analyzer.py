@@ -26,6 +26,12 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.functions[node.name] = args
         self.generic_visit(node)
 
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        """Catches Python async functions (async def ...)."""
+        args = [arg.arg for arg in node.args.args]
+        self.functions[node.name] = args
+        self.generic_visit(node)
+
     def visit_ClassDef(self, node: ast.ClassDef):
         self.classes.add(node.name)
         self.generic_visit(node)
@@ -33,39 +39,40 @@ class PythonASTVisitor(ast.NodeVisitor):
 
 def _analyze_python(old_code: str, new_code: str) -> List[str]:
     breaking_changes = []
+
     try:
         old_tree = ast.parse(old_code)
         new_tree = ast.parse(new_code)
-    except SyntaxError as e:
-        return [f"Python Syntax Error: {e}"]
 
-    old_vis, new_vis = PythonASTVisitor(), PythonASTVisitor()
-    old_vis.visit(old_tree)
-    new_vis.visit(new_tree)
+        old_vis, new_vis = PythonASTVisitor(), PythonASTVisitor()
+        old_vis.visit(old_tree)
+        new_vis.visit(new_tree)
 
-    # Detect removed functions or reduced args
-    for func, old_args in old_vis.functions.items():
-        if func not in new_vis.functions:
-            breaking_changes.append(f"Function '{func}' was removed.")
-        elif len(new_vis.functions[func]) < len(old_args):
-            breaking_changes.append(f"Function '{func}' reduced parameter list from {old_args} to {new_vis.functions[func]}.")
+        # Detect removed functions or reduced parameters
+        for func, old_args in old_vis.functions.items():
+            if func not in new_vis.functions:
+                breaking_changes.append(f"Function '{func}' was removed.")
+            elif len(new_vis.functions[func]) < len(old_args):
+                breaking_changes.append(f"Function '{func}' reduced parameter list from {old_args} to {new_vis.functions[func]}.")
 
-    # Detect removed classes
-    for cls in old_vis.classes:
-        if cls not in new_vis.classes:
-            breaking_changes.append(f"Class '{cls}' was removed.")
+        # Detect removed classes
+        for cls in old_vis.classes:
+            if cls not in new_vis.classes:
+                breaking_changes.append(f"Class '{cls}' was removed.")
+
+    except SyntaxError:
+        # Fallback to regex analysis if git diff chunk is a partial file snippet
+        breaking_changes = _analyze_regex_signatures(old_code, new_code, "python")
 
     return breaking_changes
 
 
 def _analyze_regex_signatures(old_code: str, new_code: str, lang: str) -> List[str]:
-    """
-    Parses structural method/class definitions for C#, TypeScript, JavaScript, Java, Go.
-    """
+    """Parses structural method/class definitions for C#, TS, JS, Java, Go, Python snippets."""
     breaking_changes = []
     
-    # Standard function/method definition regex patterns
     patterns = {
+        "python": r'(?:async\s+)?def\s+(\w+)\s*\(',
         "csharp": r'(?:public|private|protected|internal)\b.*?\b(\w+)\s*\(',
         "typescript": r'(?:export\s+)?(?:function|class|const)\s+(\w+)',
         "javascript": r'(?:export\s+)?(?:function|class|const)\s+(\w+)',
@@ -88,9 +95,7 @@ def _analyze_regex_signatures(old_code: str, new_code: str, lang: str) -> List[s
 
 
 def _analyze_sql_config(old_code: str, new_code: str, lang: str) -> List[str]:
-    """
-    Checks for high-risk breaking statements in SQL and config files.
-    """
+    """Checks for high-risk breaking statements in SQL and config files."""
     breaking_changes = []
     if lang == "sql":
         drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE)\s+(\w+)', new_code, re.IGNORECASE)
@@ -100,9 +105,7 @@ def _analyze_sql_config(old_code: str, new_code: str, lang: str) -> List[str]:
 
 
 def analyze_file_changes(filename: str, old_code: str, new_code: str) -> Dict[str, Any]:
-    """
-    Universal entry point to analyze breaking changes across ANY file type.
-    """
+    """Universal entry point to analyze breaking changes across ANY file type."""
     ext = f".{filename.split('.')[-1].lower()}" if "." in filename else ""
     lang = LANGUAGE_MAP.get(ext, "unknown")
 
@@ -125,17 +128,9 @@ def analyze_file_changes(filename: str, old_code: str, new_code: str) -> Dict[st
 
 
 if __name__ == "__main__":
-    print("--- Testing Python ---")
-    py_res = analyze_file_changes("service.py", "def getUser(id, token): pass", "def getUser(id): pass")
+    print("--- Testing Python (Async & Sync) ---")
+    py_res = analyze_file_changes("service.py", "async def getUser(id, token): pass", "def getUser(id): pass")
     print(py_res)
-
-    print("\n--- Testing C# ---")
-    cs_res = analyze_file_changes("UserController.cs", "public async Task GetUser(int id) {}", "public int OldUser() {}")
-    print(cs_res)
-
-    print("\n--- Testing TypeScript ---")
-    ts_res = analyze_file_changes("api.ts", "export function fetchOrders() {}", "const x = 10;")
-    print(ts_res)
 
     print("\n--- Testing SQL ---")
     sql_res = analyze_file_changes("migration.sql", "SELECT * FROM users;", "DROP TABLE users;")
