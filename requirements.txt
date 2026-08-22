@@ -4,3 +4,8 @@ google-genai
 google-cloud-bigquery
 google-cloud-firestore
 python-dotenv
+fastapi
+uvicorn[standard]
+httpx
+pytest
+pytest-asyncio
