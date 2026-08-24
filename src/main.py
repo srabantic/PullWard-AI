@@ -4,7 +4,10 @@ import re
 import hmac
 import hashlib
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Header, HTTPException
+
+load_dotenv()
 
 # Ensure the parent directory and current directory are on the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -133,18 +136,25 @@ async def github_webhook(
     )
 
     # 6. Post Consolidated Governance Report back to GitHub PR
-    if GITHUB_TOKEN and comments_url:
+    github_token = os.getenv("GITHUB_TOKEN", "")
+    if not comments_url and pr_data.get("issue_url"):
+        comments_url = pr_data.get("issue_url") + "/comments"
+
+    if github_token and comments_url:
         comment_body = gov_result["comment_markdown"] + f"\n\n*Audit Log Event ID:* `{log_res.get('event_id', 'N/A')}`"
 
         async with httpx.AsyncClient() as client:
-            await client.post(
+            resp = await client.post(
                 comments_url,
                 json={"body": comment_body},
                 headers={
-                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Authorization": f"token {github_token}",
                     "Accept": "application/vnd.github.v3+json"
                 }
             )
+            print(f"Posted comment to GitHub PR: {comments_url} -> Status {resp.status_code}")
+    else:
+        print(f"Skipped posting GitHub comment. Token present: {bool(github_token)}, URL present: {bool(comments_url)}")
 
     return {
         "status": "processed",
