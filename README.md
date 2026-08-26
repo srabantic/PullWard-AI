@@ -123,29 +123,3 @@ python src/schemas.py
 ```
 
 ---
-
-## ☁️ Google Cloud Run Serverless Deployment
-
-Deploy containerized service on **Google Cloud Run**:
-
-```bash
-# Build & tag Docker image
-docker build -t gcr.io/$GCP_PROJECT_ID/pullward-ai:latest .
-
-# Push to Container Registry
-docker push gcr.io/$GCP_PROJECT_ID/pullward-ai:latest
-
-# Deploy to Cloud Run
-gcloud run deploy pullward-ai \
-  --image gcr.io/$GCP_PROJECT_ID/pullward-ai:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=$GEMINI_API_KEY,GCP_PROJECT_ID=$GCP_PROJECT_ID,GITHUB_TOKEN=$GITHUB_TOKEN
-```
-
----
-
-## 📄 License
-
-Distributed under the Apache 2.0 License. See `LICENSE` for details.
