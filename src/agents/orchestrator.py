@@ -14,7 +14,7 @@ class PullWardOrchestrator:
         self.api_key = os.getenv("GEMINI_API_KEY", "")
         self.adk_agent = Agent(
             name="pullward_orchestrator",
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             instruction="You are the lead PullWard AI Orchestrator coordinating security, AST, and schema agents."
         )
         self.ast_agent = ASTGovernanceAgent(api_key=self.api_key)

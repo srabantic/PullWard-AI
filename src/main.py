@@ -38,17 +38,39 @@ def verify_github_signature(payload_body: bytes, signature_header: str) -> bool:
 
 def parse_diff_files(diff_text: str):
     """Splits a unified diff into individual file chunks and extracts old vs new code lines."""
+    if not diff_text:
+        return []
+
     file_diffs = []
     chunks = re.split(r'^diff --git a/(.*?) b/(.*?)$', diff_text, flags=re.MULTILINE)
 
-    for i in range(1, len(chunks), 3):
-        new_name = chunks[i + 1]
-        body = chunks[i + 2]
+    if len(chunks) >= 3:
+        for i in range(1, len(chunks), 3):
+            new_name = chunks[i + 1]
+            body = chunks[i + 2]
 
+            old_lines = []
+            new_lines = []
+
+            for line in body.splitlines():
+                if line.startswith('-') and not line.startswith('---'):
+                    old_lines.append(line[1:])
+                elif line.startswith('+') and not line.startswith('+++'):
+                    new_lines.append(line[1:])
+                elif not line.startswith(('@@', '---', '+++', 'index ')):
+                    old_lines.append(line)
+                    new_lines.append(line)
+
+            file_diffs.append({
+                "filename": new_name,
+                "old_code": "\n".join(old_lines),
+                "new_code": "\n".join(new_lines)
+            })
+    else:
+        # Fallback for single file patch or raw snippet
         old_lines = []
         new_lines = []
-
-        for line in body.splitlines():
+        for line in diff_text.splitlines():
             if line.startswith('-') and not line.startswith('---'):
                 old_lines.append(line[1:])
             elif line.startswith('+') and not line.startswith('+++'):
@@ -56,9 +78,8 @@ def parse_diff_files(diff_text: str):
             elif not line.startswith(('@@', '---', '+++', 'index ')):
                 old_lines.append(line)
                 new_lines.append(line)
-
         file_diffs.append({
-            "filename": new_name,
+            "filename": "patch.sql",
             "old_code": "\n".join(old_lines),
             "new_code": "\n".join(new_lines)
         })
@@ -107,17 +128,22 @@ async def github_webhook(
     diff_url = pr_data.get("diff_url", "")
     comments_url = pr_data.get("comments_url", "")
 
-    # 2. Fetch raw PR diff from GitHub
+    # 2. Fetch raw PR diff directly from GitHub REST API
     diff_text = ""
-    if diff_url and diff_url.startswith(("http://", "https://")):
+    github_token = os.getenv("GITHUB_TOKEN", "")
+    api_pr_url = pr_data.get("url")
+    if api_pr_url:
         async with httpx.AsyncClient() as client:
-            headers = {"User-Agent": "PullWard-AI-Bot"}
-            if GITHUB_TOKEN:
-                headers["Authorization"] = f"token {GITHUB_TOKEN}"
-
-            diff_response = await client.get(diff_url, headers=headers)
+            headers = {
+                "User-Agent": "PullWard-AI-Bot",
+                "Accept": "application/vnd.github.v3.diff"
+            }
+            if github_token:
+                headers["Authorization"] = f"token {github_token}"
+            diff_response = await client.get(api_pr_url, headers=headers)
             if diff_response.status_code == 200:
                 diff_text = diff_response.text
+    print(f"Fetched PR #{pr_number} diff: {len(diff_text)} bytes.")
 
     # 3. Parse diff into file chunks
     parsed_files = parse_diff_files(diff_text)
