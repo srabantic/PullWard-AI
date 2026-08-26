@@ -40,7 +40,7 @@ class PullWardOrchestrator:
             decision = "APPROVED"
 
         # 3. Consolidated Markdown Comment for GitHub PR
-        comment_markdown = f"### 🛡️ PullWard AI Multi-Agent Governance Report\n\n"
+        comment_markdown = f"### 🔰 PullWard AI Multi-Agent Governance Report\n\n"
         comment_markdown += f"**Overall Status**: `{decision}`\n\n"
 
         # AST Section
