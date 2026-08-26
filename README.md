@@ -1,6 +1,8 @@
 <div align="center">
 
-  <img src="assets/logo.png" alt="PullWard AI - Autonomous PR Governance & AST Defense Engine" width="480">
+<div align="center" style="background-color: #f6f8fa; padding: 20px; border-radius: 8px;">
+  <img src="assets/logo.jpg" alt="PullWard AI Logo" width="480">
+</div>
 
   <br/><br/>
 
