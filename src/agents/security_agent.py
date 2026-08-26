@@ -23,17 +23,30 @@ class SecurityAgent:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         self.client = Client(api_key=self.api_key) if self.api_key else None
 
-    def run(self, diff_text: str) -> Dict[str, Any]:
+    def run(self, diff_text: str, diff_files: List[Dict[str, str]] = None) -> Dict[str, Any]:
         findings = []
 
-        # 1. Regex secret & vulnerability scanning
-        for pattern, desc in SECRET_PATTERNS:
-            if re.search(pattern, diff_text):
-                findings.append(f"[HIGH RISK] {desc}")
+        # 1. Per-file secret & vulnerability scanning
+        if diff_files:
+            for f in diff_files:
+                filename = f.get("filename", "unknown")
+                code_to_check = f.get("new_code", "")
 
-        for pattern, desc in DANGEROUS_CALLS:
-            if re.search(pattern, diff_text):
-                findings.append(f"[MEDIUM RISK] {desc}")
+                for pattern, desc in SECRET_PATTERNS:
+                    if re.search(pattern, code_to_check):
+                        findings.append(f"`{filename}`: [HIGH RISK] {desc}")
+
+                for pattern, desc in DANGEROUS_CALLS:
+                    if re.search(pattern, code_to_check):
+                        findings.append(f"`{filename}`: [MEDIUM RISK] {desc}")
+        else:
+            for pattern, desc in SECRET_PATTERNS:
+                if re.search(pattern, diff_text):
+                    findings.append(f"[HIGH RISK] {desc}")
+
+            for pattern, desc in DANGEROUS_CALLS:
+                if re.search(pattern, diff_text):
+                    findings.append(f"[MEDIUM RISK] {desc}")
 
         # 2. Gemini AI Security Vulnerability Review
         ai_insight = "No automated security warnings detected."
@@ -52,7 +65,7 @@ Provide a concise 2-sentence security evaluation. If secrets or vulnerabilities 
 """
             try:
                 response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt
                 )
                 ai_insight = response.text.strip()
@@ -67,6 +80,6 @@ Provide a concise 2-sentence security evaluation. If secrets or vulnerabilities 
         }
 
 
-def analyze_security_risks(diff_text: str) -> Dict[str, Any]:
+def analyze_security_risks(diff_text: str, diff_files: List[Dict[str, str]] = None) -> Dict[str, Any]:
     agent = SecurityAgent()
-    return agent.run(diff_text)
+    return agent.run(diff_text, diff_files)

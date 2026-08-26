@@ -40,7 +40,7 @@ Summarize in 2 sentences the architectural risk of these removed/altered definit
 """
             try:
                 response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt
                 )
                 ai_insight = response.text.strip()
