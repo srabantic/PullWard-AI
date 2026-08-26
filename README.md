@@ -1,9 +1,8 @@
 <div align="center">
 
-  <img src="assets/logo.jpg" alt="PullWard AI Logo" width="320">
+  <img src="assets/logo.png" alt="PullWard AI - Autonomous PR Governance & AST Defense Engine" width="480">
 
-  # 🔰 PullWard AI
-  ### Autonomous PR Governance & AST Defense Engine
+  <br/><br/>
 
   [![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
   [![Google ADK](https://img.shields.io/badge/Google_ADK-Framework-4285F4?style=flat&logo=google&logoColor=white)](https://github.com/google/adk)
