@@ -6,6 +6,8 @@ import hashlib
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 load_dotenv()
 
@@ -16,6 +18,19 @@ from agents import run_pullward_governance_orchestrator
 from logger import log_pr_audit_event
 
 app = FastAPI(title="PullWard AI - PR Governance Webhook")
+
+# Mount assets directory to serve logo.png (e.g., /assets/logo.png)
+assets_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+if not os.path.exists(assets_path):
+    assets_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+# Initialize Jinja2 templates directory
+templates_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+templates = Jinja2Templates(directory=templates_path)
+
+# Live audit logs store for real-time dashboard visualization
+in_memory_audit_logs = []
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
@@ -97,6 +112,25 @@ def health_check():
     return {"status": "ok"}
 
 
+@app.get("/dashboard")
+async def render_dashboard(request: Request):
+    """Renders the real-time PR Governance Monitor UI for hackathon presentation."""
+    stats = {
+        "total_prs": len(in_memory_audit_logs),
+        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes")),
+        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("ast_conflicts_count", 0) > 0 or log.get("schema_breaking_changes")),
+        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "N/A"
+    }
+    
+    context = {
+        "request": request,
+        "logs": in_memory_audit_logs,
+        "stats": stats
+    }
+    
+    return templates.TemplateResponse(request, "dashboard.html", context)
+
+
 @app.post("/webhook")
 async def github_webhook(
     request: Request,
@@ -161,6 +195,19 @@ async def github_webhook(
         schema_breaking_changes=gov_result["schema_breaking_changes"]
     )
 
+    # Record log entry in-memory for the live UI dashboard stream
+    audit_entry = {
+        "event_id": log_res.get("event_id", "N/A"),
+        "repo_name": repo_name,
+        "pr_number": pr_number,
+        "author": author,
+        "ast_conflicts_count": gov_result["ast_conflicts_count"],
+        "security_findings_count": gov_result["security_findings_count"],
+        "schema_breaking_changes": gov_result["schema_breaking_changes"],
+        "decision": gov_result["decision"]
+    }
+    in_memory_audit_logs.insert(0, audit_entry)
+
     # 6. Post Consolidated Governance Report back to GitHub PR
     github_token = os.getenv("GITHUB_TOKEN", "")
     if not comments_url and pr_data.get("issue_url"):
@@ -193,4 +240,4 @@ async def github_webhook(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
