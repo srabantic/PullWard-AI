@@ -6,171 +6,535 @@
   <title>PullWard AI — PR Governance Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .kpi-gradient {
+      background: linear-gradient(135deg, #0b253a 0%, #0d4059 50%, #008ba3 100%);
+    }
+    .card-dark {
+      background-color: #1a2332;
+      border: 1px solid #283548;
+    }
+    /* Custom Scrollbar for Drawer & Table */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+<body class="min-h-screen text-slate-800 antialiased flex flex-col justify-between relative overflow-x-hidden">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <!-- Replaced 🛡️ emoji with official logo image -->
-      <img src="/assets/logo.png" alt="PullWard AI - Autonomous PR Governance & AST Defense Engine" class="h-10 w-auto object-contain">
-      <span class="text-xs text-slate-400 font-normal border-l border-slate-700 pl-4 py-1 hidden md:inline-block">
-        PR Governance Monitor
-      </span>
+  <!-- Top Clean White Navbar with Medium-Large Logo (h-14 / 56px) -->
+  <header class="bg-white border-b border-slate-200/80 px-8 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" alt="PullWard AI" class="h-14 w-auto object-contain">
     </div>
-    <div class="flex items-center gap-4 text-sm">
-      <span class="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 px-3 py-1 rounded-full text-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> GCP BigQuery: Connected
+    <div class="flex items-center gap-4 text-xs font-semibold text-slate-600">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Webhook Active
       </span>
-      <span class="text-slate-500">|</span>
-      <span class="text-slate-400 font-mono text-xs">Table: pullward_audit.pr_audit_logs</span>
+      <span class="text-slate-300">|</span>
+      <span class="text-slate-400 font-mono hidden sm:inline">Port: 8080</span>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto p-6 space-y-6">
+  <!-- Main Container -->
+  <main class="max-w-[1440px] mx-auto p-6 md:p-8 space-y-6 w-full flex-grow">
 
-    <!-- Top KPI Stat Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-code-pull-request"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 font-medium">Total Audited PRs</p>
-          <p class="text-2xl font-bold text-white mt-1">{{ stats.total_prs }}</p>
+    <!-- Page Title & Status Row -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+          PR Governance & Security Monitor
+        </h1>
+        <div class="flex items-center gap-2 mt-2 text-sm font-semibold text-slate-700">
+          <span>GCP BigQuery Streaming Status:</span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 font-medium text-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Connected
+          </span>
         </div>
       </div>
 
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 font-medium">Breaking Changes</p>
-          <p class="text-2xl font-bold text-white mt-1">{{ stats.breaking_changes }}</p>
-        </div>
-      </div>
-
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-ban"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 font-medium">Agent Blocks</p>
-          <p class="text-2xl font-bold text-white mt-1">{{ stats.blocked_prs }}</p>
-        </div>
-      </div>
-
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-database"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 font-medium">Latest Audit Event ID</p>
-          <p class="text-xs font-mono text-cyan-300 mt-2 truncate max-w-[140px]">{{ stats.latest_event_id }}</p>
+      <div class="flex items-center self-start md:self-auto gap-2">
+        <div class="bg-slate-100 border border-slate-300/80 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-medium flex items-center gap-2 shadow-sm">
+          <span class="text-slate-500">BigQuery Table:</span>
+          <span class="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-inner">pr_audit_logs</span>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- Live PR Audit Stream Table -->
-      <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-white flex items-center gap-2">
-            <i class="fa-solid fa-stream text-cyan-400"></i> Live PR Audit Stream
-          </h2>
-          <span class="text-xs text-slate-400">Auto-refreshing via Webhook</span>
+    <!-- 4 Real-Time KPI Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Card 1 -->
+      <div class="kpi-gradient rounded-xl p-5 text-white shadow-md flex items-center gap-4 relative overflow-hidden transition hover:scale-[1.01]">
+        <div class="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-code-pull-request text-cyan-300"></i>
         </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-900/80 text-slate-400 uppercase font-mono">
-              <tr>
-                <th class="p-3">Status</th>
-                <th class="p-3">Repository</th>
-                <th class="p-3">PR #</th>
-                <th class="p-3">Author</th>
-                <th class="p-3">AST Verdict</th>
-                <th class="p-3">Details</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-700/50">
-              {% for log in logs %}
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="p-3">
-                  {% if log.schema_breaking_changes %}
-                    <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold">BLOCKED</span>
-                  {% elif log.ast_conflicts_count > 0 %}
-                    <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">REVIEW</span>
-                  {% else %}
-                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">PASSED</span>
-                  {% endif %}
-                </td>
-                <td class="p-3 font-mono text-slate-200">{{ log.repo_name }}</td>
-                <td class="p-3 font-mono text-cyan-400">#{{ log.pr_number }}</td>
-                <td class="p-3">{{ log.author }}</td>
-                <td class="p-3 font-mono">
-                  {% if log.ast_conflicts_count > 0 %}
-                    <span class="text-amber-400">{{ log.ast_conflicts_count }} conflicts</span>
-                  {% else %}
-                    <span class="text-emerald-400">Clean</span>
-                  {% endif %}
-                </td>
-                <td class="p-3 text-slate-400 font-mono text-[11px]">
-                  {% if log.schema_breaking_changes %}DROP TABLE detected{% else %}No breaking changes{% endif %}
-                </td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="6" class="p-6 text-center text-slate-500">No PR audit events received yet. Open a GitHub PR to trigger analysis!</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div>
+          <p class="text-xs text-slate-200 font-medium tracking-wide">Total PRs Audited</p>
+          <p id="kpi-total" class="text-2xl font-extrabold mt-0.5">{{ stats.total_prs }}</p>
         </div>
       </div>
 
-      <!-- Agent Utilization Architecture Panel -->
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-        <h2 class="text-base font-semibold text-white flex items-center gap-2">
-          <i class="fa-solid fa-robot text-purple-400"></i> Google ADK Multi-Agent Stack
-        </h2>
-        
-        <div class="space-y-3 pt-2">
-          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-semibold text-cyan-300">AST Governance Agent</p>
-              <p class="text-[11px] text-slate-400">Python AST & Signature Verification</p>
-            </div>
-            <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
-          </div>
-
-          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-semibold text-purple-300">Security Audit Agent</p>
-              <p class="text-[11px] text-slate-400">Secret Scanner & Dangerous eval() Check</p>
-            </div>
-            <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
-          </div>
-
-          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-semibold text-blue-300">Schema Safety Agent</p>
-              <p class="text-[11px] text-slate-400">Destructive DDL & DROP TABLE Guard</p>
-            </div>
-            <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Active</span>
-          </div>
+      <!-- Card 2 -->
+      <div class="kpi-gradient rounded-xl p-5 text-white shadow-md flex items-center gap-4 relative overflow-hidden transition hover:scale-[1.01]">
+        <div class="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-code-merge text-rose-300"></i>
         </div>
+        <div>
+          <p class="text-xs text-slate-200 font-medium tracking-wide">Breaking Changes</p>
+          <p id="kpi-breaking" class="text-2xl font-extrabold mt-0.5">{{ stats.breaking_changes }}</p>
+        </div>
+      </div>
 
-        <div class="p-3 bg-blue-950/40 rounded-lg border border-blue-800/30 text-[11px] text-slate-300 space-y-1">
-          <p class="font-semibold text-blue-400">Orchestrator Model:</p>
-          <p class="font-mono text-slate-400">Google Gemini 3.6 Flash</p>
+      <!-- Card 3 -->
+      <div class="kpi-gradient rounded-xl p-5 text-white shadow-md flex items-center gap-4 relative overflow-hidden transition hover:scale-[1.01]">
+        <div class="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-ban text-rose-300"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-200 font-medium tracking-wide">Agent Blocks</p>
+          <p id="kpi-blocked" class="text-2xl font-extrabold mt-0.5">{{ stats.blocked_prs }}</p>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="kpi-gradient rounded-xl p-5 text-white shadow-md flex items-center gap-4 relative overflow-hidden transition hover:scale-[1.01]">
+        <div class="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-xl shrink-0">
+          <i class="fa-solid fa-database text-cyan-300"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-slate-200 font-medium tracking-wide">Audit Event ID</p>
+          <div class="flex items-center gap-1.5 mt-1">
+            <span id="kpi-event-id" class="text-xs font-mono bg-black/30 border border-white/10 px-2 py-0.5 rounded truncate max-w-[130px]">
+              LATEST: `{{ stats.latest_event_id[:10] }}`
+            </span>
+            <button onclick="copyEventId()" class="text-cyan-300 hover:text-white transition text-xs" title="Copy Event ID">
+              <i class="fa-regular fa-copy"></i>
+            </button>
+          </div>
         </div>
       </div>
 
     </div>
+
+    <!-- 3 Column Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Column 1: Live PR Audit Stream Table (5 cols) -->
+      <div class="lg:col-span-5 card-dark rounded-xl p-5 text-white shadow-md flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-700/60">
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-bold tracking-wide text-white">Live PR Audit Stream</h2>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+            
+            <!-- Filter Pills -->
+            <div class="flex items-center gap-1 text-[10px] font-semibold bg-slate-900/90 p-0.5 rounded-lg border border-slate-700">
+              <button onclick="filterTable('ALL')" id="tab-all" class="px-2 py-0.5 rounded bg-cyan-600 text-white transition">All</button>
+              <button onclick="filterTable('BLOCKED')" id="tab-blocked" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Blocked</button>
+              <button onclick="filterTable('APPROVED')" id="tab-approved" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Passed</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="text-[11px] text-slate-400 font-semibold border-b border-slate-700/40">
+                <tr>
+                  <th class="py-2.5 px-2">Status</th>
+                  <th class="py-2.5 px-2">Repository</th>
+                  <th class="py-2.5 px-2">PR #</th>
+                  <th class="py-2.5 px-2">Author</th>
+                  <th class="py-2.5 px-2">AST Verdict</th>
+                  <th class="py-2.5 px-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pr-table-body" class="divide-y divide-slate-800 text-[11px]">
+                {% for log in logs %}
+                <tr onclick="openPrDrawer({{ loop.index0 }})" class="hover:bg-slate-800/80 cursor-pointer transition pr-row" data-decision="{{ log.decision }}">
+                  <td class="py-2.5 px-2">
+                    {% if log.decision == 'BLOCKED' or log.schema_breaking_changes or log.security_findings_count > 0 %}
+                      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/20 text-rose-400" title="Blocked"><i class="fa-solid fa-xmark text-xs"></i></span>
+                    {% elif log.decision == 'NEEDS_REVIEW' or log.ast_conflicts_count > 0 %}
+                      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400" title="Needs Review"><i class="fa-solid fa-triangle-exclamation text-xs"></i></span>
+                    {% else %}
+                      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400" title="Approved"><i class="fa-solid fa-check text-xs"></i></span>
+                    {% endif %}
+                  </td>
+                  <td class="py-2.5 px-2 font-mono text-slate-200 truncate max-w-[100px]">{{ log.repo_name }}</td>
+                  <td class="py-2.5 px-2 font-mono text-cyan-400">#{{ log.pr_number }}</td>
+                  <td class="py-2.5 px-2 text-slate-300 truncate max-w-[80px]">{{ log.author }}</td>
+                  <td class="py-2.5 px-2">
+                    {% if log.decision == 'BLOCKED' or log.schema_breaking_changes or log.security_findings_count > 0 %}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800">BLOCKED</span>
+                    {% elif log.decision == 'NEEDS_REVIEW' or log.ast_conflicts_count > 0 %}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800">NEEDS_REVIEW</span>
+                    {% else %}
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800">APPROVED</span>
+                    {% endif %}
+                  </td>
+                  <td class="py-2.5 px-2 text-right text-slate-400 hover:text-cyan-300">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                  </td>
+                </tr>
+                {% else %}
+                <tr id="empty-row">
+                  <td colspan="6" class="p-8 text-center text-slate-500 text-xs">
+                    <i class="fa-solid fa-inbox text-2xl text-slate-600 block mb-2"></i>
+                    No live PR audit events yet. Open or update a GitHub PR to trigger real-time multi-agent analysis!
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: AST & Security Findings (4 cols) -->
+      <div class="lg:col-span-4 card-dark rounded-xl p-5 text-white shadow-md space-y-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-700/60">
+            <h2 class="text-sm font-bold tracking-wide text-white">AST & Security Findings</h2>
+          </div>
+
+          <!-- Bar Chart Container -->
+          <div class="space-y-1">
+            <p class="text-[11px] text-slate-300 font-semibold">Breaking AST Changes Detected</p>
+            <div class="h-36 w-full">
+              <canvas id="astBarChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Donut Chart Container -->
+          <div class="space-y-1 pt-3 border-t border-slate-800 mt-2">
+            <p class="text-[11px] text-slate-300 font-semibold">Security Event Breakdown</p>
+            <div class="flex items-center justify-between gap-2 h-28">
+              <div class="w-28 h-28 shrink-0">
+                <canvas id="securityDonutChart"></canvas>
+              </div>
+              <div class="text-[11px] text-slate-300 space-y-1.5 font-medium pr-2">
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Secrets</div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> eval() Calls</div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> SQL Drops</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Agent Utilization Breakdown (3 cols) -->
+      <div class="lg:col-span-3 card-dark rounded-xl p-5 text-white shadow-md flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-700/60">
+            <h2 class="text-sm font-bold tracking-wide text-white">Agent Utilization Breakdown</h2>
+          </div>
+
+          <!-- Architectural Hierarchy Diagram -->
+          <div class="flex flex-col items-center py-2 space-y-3">
+            
+            <!-- Top Shield Logo -->
+            <div class="bg-white/10 border border-cyan-500/40 p-2.5 rounded-2xl shadow-inner flex items-center justify-center">
+              <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" class="h-12 w-auto object-contain rounded-lg">
+            </div>
+
+            <!-- Flow Arrows -->
+            <div class="w-full flex justify-around text-cyan-400 text-xs px-2">
+              <i class="fa-solid fa-arrow-down"></i>
+              <i class="fa-solid fa-arrow-down"></i>
+              <i class="fa-solid fa-arrow-down"></i>
+            </div>
+
+            <!-- Sub-Agents Grid -->
+            <div class="grid grid-cols-3 gap-1.5 w-full text-center">
+              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+                <p class="text-[10px] font-bold text-cyan-300 leading-tight">AST</p>
+                <p class="text-[9px] text-slate-400 leading-tight">Governance</p>
+                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+              </div>
+
+              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+                <p class="text-[10px] font-bold text-cyan-300 leading-tight">Security</p>
+                <p class="text-[9px] text-slate-400 leading-tight">Audit</p>
+                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+              </div>
+
+              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+                <p class="text-[10px] font-bold text-cyan-300 leading-tight">Schema</p>
+                <p class="text-[9px] text-slate-400 leading-tight">Safety</p>
+                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+              </div>
+            </div>
+
+            <div class="text-cyan-400 text-xs pt-1">
+              <i class="fa-solid fa-arrow-down"></i>
+            </div>
+
+            <div class="bg-[#102436] border border-cyan-500/40 rounded-lg p-2.5 w-full text-center">
+              <p class="text-[10px] font-bold text-cyan-300">PullWard Orchestrator</p>
+              <p class="text-[8px] text-emerald-400 mt-0.5">Gemini 3.6 Flash (Supervised)</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </main>
+
+  <!-- Interactive Slide-Out Drawer (PR Investigation Modal) -->
+  <div id="drawer-backdrop" onclick="closePrDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+  <aside id="pr-drawer" class="fixed top-0 right-0 h-full w-full max-w-lg bg-[#141d2b] border-l border-slate-700/80 text-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between">
+    
+    <!-- Drawer Header -->
+    <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+      <div>
+        <span id="drawer-status-pill" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">BLOCKED</span>
+        <h2 id="drawer-pr-title" class="text-base font-bold text-white mt-2">PR #2 - Governance Report</h2>
+        <p id="drawer-pr-meta" class="text-xs text-slate-400 font-mono mt-0.5">srabantic/PullWard-AI by @srabantic</p>
+      </div>
+      <button onclick="closePrDrawer()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-6 overflow-y-auto space-y-5 flex-grow text-xs">
+      
+      <!-- AST Findings Section -->
+      <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-800">
+        <h3 class="font-semibold text-cyan-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-code"></i> AST Contract Analysis
+        </h3>
+        <div id="drawer-ast-findings" class="space-y-1 text-slate-300 font-mono text-[11px]">
+          No AST conflicts detected.
+        </div>
+      </div>
+
+      <!-- Security Findings Section -->
+      <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-800">
+        <h3 class="font-semibold text-rose-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-shield-virus"></i> Security & Secret Scanner
+        </h3>
+        <div id="drawer-security-findings" class="space-y-1 text-slate-300 font-mono text-[11px]">
+          No exposed secrets found.
+        </div>
+      </div>
+
+      <!-- Database Schema Section -->
+      <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-800">
+        <h3 class="font-semibold text-amber-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-database"></i> Database Migration Safety
+        </h3>
+        <div id="drawer-schema-findings" class="space-y-1 text-slate-300 font-mono text-[11px]">
+          No destructive SQL statements found.
+        </div>
+      </div>
+
+      <!-- BigQuery Audit Stream JSON -->
+      <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-800">
+        <h3 class="font-semibold text-purple-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-cloud"></i> BigQuery Streamed Payload
+        </h3>
+        <pre id="drawer-json-payload" class="bg-black/50 p-3 rounded-lg overflow-x-auto text-[10px] font-mono text-slate-400 border border-slate-800 max-h-36">{}</pre>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="p-6 border-t border-slate-800 bg-[#0f1724] flex items-center justify-between gap-3">
+      <a id="drawer-github-link" href="#" target="_blank" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-center py-2.5 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 transition">
+        <i class="fa-brands fa-github text-sm"></i> View Pull Request on GitHub
+      </a>
+      <button onclick="closePrDrawer()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition">
+        Close
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- Live Dynamic Chart.js & Auto-Poller Script -->
+  <script>
+    let currentLogs = {{ logs | tojson if logs else [] }};
+
+    // 1. Chart.js Setup
+    const ctxBar = document.getElementById('astBarChart').getContext('2d');
+    const astChart = new Chart(ctxBar, {
+      type: 'bar',
+      data: {
+        labels: ['Param Drops', 'Function Removals', 'Class Deletes'],
+        datasets: [{
+          data: {{ chart_data.ast_bar | tojson if chart_data else [0, 0, 0] }},
+          backgroundColor: ['#00c4e8', '#0096c7', '#0077b6'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { size: 9 }, precision: 0 }, grid: { color: '#334155' } }
+        }
+      }
+    });
+
+    const ctxDonut = document.getElementById('securityDonutChart').getContext('2d');
+    const secChart = new Chart(ctxDonut, {
+      type: 'doughnut',
+      data: {
+        labels: ['Secrets', 'eval()', 'SQL Drops'],
+        datasets: [{
+          data: {{ chart_data.security_donut | tojson if chart_data else [0, 0, 0] }},
+          backgroundColor: ['#3b82f6', '#22d3ee', '#64748b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        cutout: '70%'
+      }
+    });
+
+    // 2. Interactive Drawer Open/Close
+    function openPrDrawer(index) {
+      const log = currentLogs[index];
+      if (!log) return;
+
+      document.getElementById('drawer-status-pill').innerText = log.decision || 'AUDITED';
+      document.getElementById('drawer-pr-title').innerText = `${log.pr_title || 'PR #' + log.pr_number}`;
+      document.getElementById('drawer-pr-meta').innerText = `${log.repo_name} • Author: @${log.author}`;
+      document.getElementById('drawer-github-link').href = log.html_url || `https://github.com/${log.repo_name}/pull/${log.pr_number}`;
+
+      // AST details
+      const astFindings = log.details && log.details.ast && log.details.ast.findings;
+      document.getElementById('drawer-ast-findings').innerHTML = (astFindings && astFindings.length > 0)
+        ? astFindings.map(f => `<div class="text-amber-300">• ${f}</div>`).join('')
+        : '<div class="text-emerald-400">✓ Clean - No AST signature conflicts detected.</div>';
+
+      // Security details
+      const secFindings = log.details && log.details.security && log.details.security.findings;
+      document.getElementById('drawer-security-findings').innerHTML = (secFindings && secFindings.length > 0)
+        ? secFindings.map(f => `<div class="text-rose-300">• ${f}</div>`).join('')
+        : '<div class="text-emerald-400">✓ Clean - No exposed secrets or unsafe execution patterns.</div>';
+
+      // Schema details
+      const schemaFindings = log.details && log.details.schema && log.details.schema.findings;
+      document.getElementById('drawer-schema-findings').innerHTML = (schemaFindings && schemaFindings.length > 0)
+        ? schemaFindings.map(f => `<div class="text-rose-300">• ${f}</div>`).join('')
+        : '<div class="text-emerald-400">✓ Clean - No destructive DROP statements found.</div>';
+
+      // Raw JSON
+      document.getElementById('drawer-json-payload').innerText = JSON.stringify(log, null, 2);
+
+      // Open drawer
+      document.getElementById('drawer-backdrop').classList.remove('hidden');
+      document.getElementById('pr-drawer').classList.remove('translate-x-full');
+    }
+
+    function closePrDrawer() {
+      document.getElementById('drawer-backdrop').classList.add('hidden');
+      document.getElementById('pr-drawer').classList.add('translate-x-full');
+    }
+
+    // 3. One-Click Copy Event ID
+    function copyEventId() {
+      if (currentLogs.length > 0 && currentLogs[0].event_id) {
+        navigator.clipboard.writeText(currentLogs[0].event_id);
+        alert('Copied BigQuery Event ID: ' + currentLogs[0].event_id);
+      }
+    }
+
+    // 4. Filter Tabs
+    function filterTable(type) {
+      document.querySelectorAll('.pr-row').forEach(row => {
+        const decision = row.getAttribute('data-decision');
+        if (type === 'ALL' || decision === type) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      document.getElementById('tab-all').className = type === 'ALL' ? 'px-2 py-0.5 rounded bg-cyan-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-blocked').className = type === 'BLOCKED' ? 'px-2 py-0.5 rounded bg-rose-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-approved').className = type === 'APPROVED' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+    }
+
+    // 5. Live Background Auto-Poller (Every 3.5 Seconds)
+    setInterval(async () => {
+      try {
+        const res = await fetch('/api/logs');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        currentLogs = data.logs;
+
+        // Update KPI Counters
+        document.getElementById('kpi-total').innerText = data.stats.total_prs;
+        document.getElementById('kpi-breaking').innerText = data.stats.breaking_changes;
+        document.getElementById('kpi-blocked').innerText = data.stats.blocked_prs;
+        document.getElementById('kpi-event-id').innerText = 'LATEST: `' + (data.stats.latest_event_id ? data.stats.latest_event_id.substring(0, 10) : 'None') + '`';
+
+        // Update Charts
+        if (data.chart_data) {
+          astChart.data.datasets[0].data = data.chart_data.ast_bar;
+          astChart.update();
+          secChart.data.datasets[0].data = data.chart_data.security_donut;
+          secChart.update();
+        }
+
+        // Update Table Rows
+        const tbody = document.getElementById('pr-table-body');
+        if (data.logs.length > 0) {
+          tbody.innerHTML = data.logs.map((log, index) => {
+            const isBlocked = log.decision === 'BLOCKED' || log.schema_breaking_changes || log.security_findings_count > 0;
+            const isReview = log.decision === 'NEEDS_REVIEW' || log.ast_conflicts_count > 0;
+            const statusIcon = isBlocked 
+              ? `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/20 text-rose-400"><i class="fa-solid fa-xmark text-xs"></i></span>`
+              : isReview 
+                ? `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-400"><i class="fa-solid fa-triangle-exclamation text-xs"></i></span>`
+                : `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400"><i class="fa-solid fa-check text-xs"></i></span>`;
+
+            const badge = isBlocked
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800">BLOCKED</span>`
+              : isReview
+                ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800">NEEDS_REVIEW</span>`
+                : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800">APPROVED</span>`;
+
+            return `
+              <tr onclick="openPrDrawer(${index})" class="hover:bg-slate-800/80 cursor-pointer transition pr-row" data-decision="${log.decision}">
+                <td class="py-2.5 px-2">${statusIcon}</td>
+                <td class="py-2.5 px-2 font-mono text-slate-200 truncate max-w-[100px]">${log.repo_name}</td>
+                <td class="py-2.5 px-2 font-mono text-cyan-400">#${log.pr_number}</td>
+                <td class="py-2.5 px-2 text-slate-300 truncate max-w-[80px]">${log.author}</td>
+                <td class="py-2.5 px-2">${badge}</td>
+                <td class="py-2.5 px-2 text-right text-slate-400 hover:text-cyan-300"><i class="fa-solid fa-chevron-right text-[10px]"></i></td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('Auto-poll error:', err);
+      }
+    }, 3500);
+  </script>
+
 </body>
 </html>

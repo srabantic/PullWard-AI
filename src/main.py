@@ -112,20 +112,57 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.get("/dashboard")
-async def render_dashboard(request: Request):
-    """Renders the real-time PR Governance Monitor UI for hackathon presentation."""
+@app.get("/api/logs")
+async def get_live_audit_logs():
+    """Returns real-time JSON data for the dashboard auto-polling stream."""
     stats = {
         "total_prs": len(in_memory_audit_logs),
-        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes")),
-        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("ast_conflicts_count", 0) > 0 or log.get("schema_breaking_changes")),
-        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "N/A"
+        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
+        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
+        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "None"
+    }
+    
+    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in in_memory_audit_logs)
+    security_secrets_total = sum(log.get("security_findings_count", 0) for log in in_memory_audit_logs)
+    schema_drops_total = sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes"))
+
+    chart_data = {
+        "ast_bar": [ast_conflicts_total, 0, 0],
+        "security_donut": [security_secrets_total, 0, schema_drops_total]
+    }
+    
+    return {
+        "stats": stats,
+        "logs": in_memory_audit_logs,
+        "chart_data": chart_data
+    }
+
+
+@app.get("/dashboard")
+async def render_dashboard(request: Request):
+    """Renders the real-time PR Governance Monitor UI powered by live PR events."""
+    stats = {
+        "total_prs": len(in_memory_audit_logs),
+        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
+        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
+        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "None"
+    }
+    
+    # Calculate live chart breakdown from incoming PR events
+    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in in_memory_audit_logs)
+    security_secrets_total = sum(log.get("security_findings_count", 0) for log in in_memory_audit_logs)
+    schema_drops_total = sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes"))
+
+    chart_data = {
+        "ast_bar": [ast_conflicts_total, 0, 0],
+        "security_donut": [security_secrets_total, 0, schema_drops_total]
     }
     
     context = {
         "request": request,
         "logs": in_memory_audit_logs,
-        "stats": stats
+        "stats": stats,
+        "chart_data": chart_data
     }
     
     return templates.TemplateResponse(request, "dashboard.html", context)
@@ -196,15 +233,21 @@ async def github_webhook(
     )
 
     # Record log entry in-memory for the live UI dashboard stream
+    import datetime
     audit_entry = {
         "event_id": log_res.get("event_id", "N/A"),
         "repo_name": repo_name,
         "pr_number": pr_number,
+        "pr_title": pr_title or f"PR #{pr_number}",
         "author": author,
+        "html_url": pr_data.get("html_url", f"https://github.com/{repo_name}/pull/{pr_number}"),
         "ast_conflicts_count": gov_result["ast_conflicts_count"],
         "security_findings_count": gov_result["security_findings_count"],
         "schema_breaking_changes": gov_result["schema_breaking_changes"],
-        "decision": gov_result["decision"]
+        "decision": gov_result["decision"],
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S UTC"),
+        "comment_markdown": gov_result.get("comment_markdown", ""),
+        "details": gov_result.get("details", {})
     }
     in_memory_audit_logs.insert(0, audit_entry)
 
