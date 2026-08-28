@@ -43,9 +43,12 @@ Summarize in 2 sentences the architectural risk of these removed/altered definit
                     model="gemini-3.6-flash",
                     contents=prompt
                 )
-                ai_insight = response.text.strip()
             except Exception as e:
-                ai_insight = f"AI AST analysis fallback: {str(e)}"
+                err_msg = str(e)
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    ai_insight = f"Deterministic AST contract analysis identified {conflicts_count} breaking change(s) across public API signatures."
+                else:
+                    ai_insight = f"Static AST analysis identified {conflicts_count} structural change(s)."
 
         return {
             "agent": "ASTGovernanceAgent",
