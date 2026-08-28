@@ -9,7 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #f8fafc;
+      background: linear-gradient(180deg, #e6f2fc 0%, #d5e9f8 100%);
+      background-attachment: fixed;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     .kpi-gradient {
@@ -35,17 +36,17 @@
 </head>
 <body class="min-h-screen text-slate-800 antialiased flex flex-col justify-between relative overflow-x-hidden">
 
-  <!-- Top Clean White Navbar with Medium-Large Logo (h-14 / 56px) -->
-  <header class="bg-white border-b border-slate-200/80 px-8 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-40">
+  <!-- Top Frosted Glassmorphic Navbar (Option 1) -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-blue-200/70 px-8 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-40">
     <div class="flex items-center gap-3">
       <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" alt="PullWard AI" class="h-14 w-auto object-contain">
     </div>
     <div class="flex items-center gap-4 text-xs font-semibold text-slate-600">
-      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50/90 text-emerald-700 border border-emerald-300 shadow-xs">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Webhook Active
       </span>
-      <span class="text-slate-300">|</span>
-      <span class="text-slate-400 font-mono hidden sm:inline">Port: 8080</span>
+      <span class="text-blue-200">|</span>
+      <span class="text-slate-500 font-mono hidden sm:inline">Port: 8080</span>
     </div>
   </header>
 

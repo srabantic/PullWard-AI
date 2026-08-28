@@ -15,7 +15,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents import run_pullward_governance_orchestrator
-from logger import log_pr_audit_event
+from logger import log_pr_audit_event, fetch_recent_audit_logs
 
 app = FastAPI(title="PullWard AI - PR Governance Webhook")
 
@@ -112,19 +112,30 @@ def health_check():
     return {"status": "ok"}
 
 
+def get_current_audit_logs():
+    """Returns in-memory logs, hydrating from BigQuery if empty."""
+    global in_memory_audit_logs
+    if not in_memory_audit_logs:
+        bq_records = fetch_recent_audit_logs(limit=50)
+        if bq_records:
+            in_memory_audit_logs.extend(bq_records)
+    return in_memory_audit_logs
+
+
 @app.get("/api/logs")
 async def get_live_audit_logs():
     """Returns real-time JSON data for the dashboard auto-polling stream."""
+    logs = get_current_audit_logs()
     stats = {
-        "total_prs": len(in_memory_audit_logs),
-        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
-        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
-        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "None"
+        "total_prs": len(logs),
+        "breaking_changes": sum(1 for log in logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
+        "blocked_prs": sum(1 for log in logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
+        "latest_event_id": logs[0]["event_id"] if logs else "None"
     }
     
-    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in in_memory_audit_logs)
-    security_secrets_total = sum(log.get("security_findings_count", 0) for log in in_memory_audit_logs)
-    schema_drops_total = sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes"))
+    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in logs)
+    security_secrets_total = sum(log.get("security_findings_count", 0) for log in logs)
+    schema_drops_total = sum(1 for log in logs if log.get("schema_breaking_changes"))
 
     chart_data = {
         "ast_bar": [ast_conflicts_total, 0, 0],
@@ -133,25 +144,25 @@ async def get_live_audit_logs():
     
     return {
         "stats": stats,
-        "logs": in_memory_audit_logs,
+        "logs": logs,
         "chart_data": chart_data
     }
 
 
 @app.get("/dashboard")
 async def render_dashboard(request: Request):
-    """Renders the real-time PR Governance Monitor UI powered by live PR events."""
+    """Renders the real-time PR Governance Monitor UI powered by live PR events and BigQuery history."""
+    logs = get_current_audit_logs()
     stats = {
-        "total_prs": len(in_memory_audit_logs),
-        "breaking_changes": sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
-        "blocked_prs": sum(1 for log in in_memory_audit_logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
-        "latest_event_id": in_memory_audit_logs[0]["event_id"] if in_memory_audit_logs else "None"
+        "total_prs": len(logs),
+        "breaking_changes": sum(1 for log in logs if log.get("schema_breaking_changes") or log.get("ast_conflicts_count", 0) > 0),
+        "blocked_prs": sum(1 for log in logs if log.get("decision") == "BLOCKED" or log.get("schema_breaking_changes") or log.get("security_findings_count", 0) > 0),
+        "latest_event_id": logs[0]["event_id"] if logs else "None"
     }
     
-    # Calculate live chart breakdown from incoming PR events
-    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in in_memory_audit_logs)
-    security_secrets_total = sum(log.get("security_findings_count", 0) for log in in_memory_audit_logs)
-    schema_drops_total = sum(1 for log in in_memory_audit_logs if log.get("schema_breaking_changes"))
+    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in logs)
+    security_secrets_total = sum(log.get("security_findings_count", 0) for log in logs)
+    schema_drops_total = sum(1 for log in logs if log.get("schema_breaking_changes"))
 
     chart_data = {
         "ast_bar": [ast_conflicts_total, 0, 0],
@@ -160,7 +171,7 @@ async def render_dashboard(request: Request):
     
     context = {
         "request": request,
-        "logs": in_memory_audit_logs,
+        "logs": logs,
         "stats": stats,
         "chart_data": chart_data
     }

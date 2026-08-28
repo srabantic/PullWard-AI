@@ -52,6 +52,51 @@ def log_pr_audit_event(
         return {"status": "local_fallback", "event_id": event_id}
 
 
+def fetch_recent_audit_logs(project_id: str = None, limit: int = 50) -> list:
+    """
+    Fetches the latest PR audit logs directly from BigQuery for permanent historical persistence.
+    """
+    if not project_id:
+        project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+
+    try:
+        client = bigquery.Client(project=project_id)
+        query = f"""
+            SELECT event_id, repo_name, pr_number, author, ast_conflicts_count, 
+                   security_findings_count, schema_breaking_changes, timestamp
+            FROM `{project_id}.pullward_audit.pr_audit_logs`
+            ORDER BY timestamp DESC
+            LIMIT {limit}
+        """
+        query_job = client.query(query)
+        results = []
+        for row in query_job:
+            decision = "BLOCKED" if (row.schema_breaking_changes or (row.security_findings_count and row.security_findings_count > 0)) else ("NEEDS_REVIEW" if (row.ast_conflicts_count and row.ast_conflicts_count > 0) else "APPROVED")
+            ts_str = row.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC") if hasattr(row.timestamp, "strftime") else str(row.timestamp)
+            results.append({
+                "event_id": row.event_id,
+                "repo_name": row.repo_name,
+                "pr_number": row.pr_number,
+                "pr_title": f"PR #{row.pr_number}",
+                "author": row.author or "unknown",
+                "html_url": f"https://github.com/{row.repo_name}/pull/{row.pr_number}",
+                "ast_conflicts_count": row.ast_conflicts_count or 0,
+                "security_findings_count": row.security_findings_count or 0,
+                "schema_breaking_changes": bool(row.schema_breaking_changes),
+                "decision": decision,
+                "timestamp": ts_str,
+                "details": {
+                    "ast": {"findings": [f"AST conflicts: {row.ast_conflicts_count}"] if row.ast_conflicts_count else []},
+                    "security": {"findings": [f"Security findings: {row.security_findings_count}"] if row.security_findings_count else []},
+                    "schema": {"findings": ["Destructive schema statement detected (DROP TABLE)"] if row.schema_breaking_changes else []}
+                }
+            })
+        return results
+    except Exception as e:
+        print(f"[BIGQUERY FETCH] Querying BigQuery skipped ({e}). Using local in-memory fallback.")
+        return []
+
+
 if __name__ == "__main__":
     test_result = log_pr_audit_event(
         repo_name="Google-Patchamomma/PullWard-AI",

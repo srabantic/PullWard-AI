@@ -39,9 +39,17 @@ class PullWardOrchestrator:
         else:
             decision = "APPROVED"
 
-        # 3. Consolidated Markdown Comment for GitHub PR
-        comment_markdown = f"### 🔰 PullWard AI Multi-Agent Governance Report\n\n"
-        comment_markdown += f"**Overall Status**: `{decision}`\n\n"
+        # 3. Consolidated Markdown Comment for GitHub PR with Official PullWard AI Logo
+        logo_url = "https://raw.githubusercontent.com/srabantic/PullWard-AI/main/assets/logo.png"
+        comment_markdown = f"""<p align="left">
+  <img src="{logo_url}" alt="PullWard AI Logo" width="220" />
+</p>
+
+### Multi-Agent Governance Report
+
+**Overall Status**: `{decision}`
+
+"""
 
         # AST Section
         if ast_result["findings"]:
