@@ -210,6 +210,9 @@
         <div>
           <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-700/60">
             <h2 class="text-sm font-bold tracking-wide text-white">AST & Security Findings</h2>
+            <span class="text-[10px] text-cyan-300 bg-cyan-950/80 border border-cyan-700/60 px-2 py-0.5 rounded flex items-center gap-1 font-medium shadow-xs">
+              <i class="fa-solid fa-arrow-pointer text-[9px] text-cyan-400"></i> Click chart to inspect files
+            </span>
           </div>
 
           <!-- Bar Chart Container -->
@@ -368,6 +371,36 @@
 
   </aside>
 
+  <!-- Interactive Findings Drill-Down Modal / Drawer -->
+  <div id="findings-backdrop" onclick="closeFindingsDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+  <aside id="findings-drawer" class="fixed top-0 right-0 h-full w-full max-w-lg bg-[#141d2b] border-l border-slate-700/80 text-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between">
+    
+    <!-- Drawer Header -->
+    <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+      <div>
+        <span id="findings-drawer-pill" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">DRILL-DOWN</span>
+        <h2 id="findings-drawer-title" class="text-base font-bold text-white mt-2">Param Drops Breakdown</h2>
+        <p id="findings-drawer-subtitle" class="text-xs text-slate-400 mt-0.5">Showing all PRs and file locations affected.</p>
+      </div>
+      <button onclick="closeFindingsDrawer()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div id="findings-drawer-content" class="p-6 overflow-y-auto space-y-4 flex-grow text-xs">
+      <!-- Dynamic list of PRs with affected files -->
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="p-6 border-t border-slate-800 bg-[#0f1724] flex items-center justify-end">
+      <button onclick="closeFindingsDrawer()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition">
+        Close Drill-Down
+      </button>
+    </div>
+
+  </aside>
+
   <!-- Live Dynamic Chart.js & Auto-Poller Script -->
   <script>
     let currentLogs = {{ logs | tojson if logs else [] }};
@@ -387,7 +420,26 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const category = astChart.data.labels[index];
+            openFindingsDrilldown('AST', category);
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterLabel: function() {
+                return '👉 Click bar to inspect files & PRs';
+              }
+            }
+          }
+        },
         scales: {
           x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } },
           y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { size: 9 }, precision: 0 }, grid: { color: '#334155' } }
@@ -409,10 +461,106 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const category = secChart.data.labels[index];
+            openFindingsDrilldown('SECURITY', category);
+          }
+        },
+        onHover: (event, elements) => {
+          event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterLabel: function() {
+                return '👉 Click slice to inspect files & PRs';
+              }
+            }
+          }
+        },
         cutout: '70%'
       }
     });
+
+    // 2. Interactive Findings Drill-Down Drawer
+    function openFindingsDrilldown(type, category) {
+      document.getElementById('findings-drawer-title').innerText = `${category} - Affected Files`;
+      document.getElementById('findings-drawer-subtitle').innerText = `Pull Requests and code locations introducing ${category}.`;
+      
+      const container = document.getElementById('findings-drawer-content');
+      
+      let matchingPrs = [];
+      currentLogs.forEach(log => {
+        let matchedItems = [];
+        const astFindings = (log.details && log.details.ast && log.details.ast.findings) || [];
+        const secFindings = (log.details && log.details.security && log.details.security.findings) || [];
+        const schemaFindings = (log.details && log.details.schema && log.details.schema.findings) || [];
+        
+        if (category.toLowerCase().includes('param') || category === 'Param Drops') {
+          matchedItems = astFindings.filter(f => f.toLowerCase().includes('parameter') || f.toLowerCase().includes('param') || f.toLowerCase().includes('conflict') || f.toLowerCase().includes('drop'));
+          if (matchedItems.length === 0 && log.ast_conflicts_count > 0) {
+            matchedItems = [`${log.ast_conflicts_count} AST signature conflict(s) detected in ${log.repo_name}`];
+          }
+        } else if (category.toLowerCase().includes('function') || category === 'Function Removals') {
+          matchedItems = astFindings.filter(f => f.toLowerCase().includes('function') || f.toLowerCase().includes('removed') || f.toLowerCase().includes('renamed'));
+        } else if (category.toLowerCase().includes('class') || category === 'Class Deletes') {
+          matchedItems = astFindings.filter(f => f.toLowerCase().includes('class'));
+        } else if (category.toLowerCase().includes('sql') || category === 'SQL Drops') {
+          matchedItems = schemaFindings.length > 0 ? schemaFindings : (log.schema_breaking_changes ? ['Destructive DROP TABLE statement detected in database migrations'] : []);
+        } else if (category.toLowerCase().includes('secret') || category === 'Secrets') {
+          matchedItems = secFindings.filter(f => f.toLowerCase().includes('secret') || f.toLowerCase().includes('api_key') || f.toLowerCase().includes('token'));
+          if (matchedItems.length === 0 && log.security_findings_count > 0) {
+            matchedItems = [`${log.security_findings_count} hardcoded secret/credential(s) detected`];
+          }
+        } else if (category.toLowerCase().includes('eval') || category === 'eval() Calls' || category === 'eval()') {
+          matchedItems = secFindings.filter(f => f.toLowerCase().includes('eval') || f.toLowerCase().includes('exec'));
+        }
+        
+        if (matchedItems.length > 0) {
+          matchingPrs.push({ log, items: matchedItems });
+        }
+      });
+      
+      if (matchingPrs.length > 0) {
+        container.innerHTML = matchingPrs.map(({ log, items }) => `
+          <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-800 hover:border-cyan-500/40 transition space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-cyan-400 font-bold">#${log.pr_number} - ${log.pr_title || 'PR #' + log.pr_number}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${log.decision === 'BLOCKED' ? 'bg-rose-950/80 text-rose-300 border border-rose-800' : 'bg-amber-950/80 text-amber-300 border border-amber-800'}">${log.decision}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-mono">${log.repo_name} • Author: @${log.author}</p>
+            <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
+              <p class="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">File Findings:</p>
+              ${items.map(it => `<div class="text-amber-300 font-mono text-[11px] bg-slate-950/60 p-2 rounded border border-slate-800/80 flex items-start gap-1.5"><i class="fa-solid fa-file-code text-cyan-400 text-xs mt-0.5"></i> <span>${it}</span></div>`).join('')}
+            </div>
+            <div class="pt-2 flex justify-end">
+              <a href="${log.html_url || '#'}" target="_blank" class="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold">
+                Open PR on GitHub <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+              </a>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-500 text-xs space-y-2">
+            <i class="fa-solid fa-circle-check text-2xl text-emerald-500 block mb-1"></i>
+            <p class="text-slate-300 font-semibold">No recent PRs introduced ${category}.</p>
+            <p class="text-slate-500">Your codebase is clean for this risk category.</p>
+          </div>
+        `;
+      }
+      
+      document.getElementById('findings-backdrop').classList.remove('hidden');
+      document.getElementById('findings-drawer').classList.remove('translate-x-full');
+    }
+
+    function closeFindingsDrawer() {
+      document.getElementById('findings-backdrop').classList.add('hidden');
+      document.getElementById('findings-drawer').classList.add('translate-x-full');
+    }
 
     // 2. Interactive Drawer Open/Close
     function openPrDrawer(index) {
