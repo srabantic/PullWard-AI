@@ -122,6 +122,48 @@ def get_current_audit_logs():
     return in_memory_audit_logs
 
 
+def compute_chart_metrics(logs):
+    """Computes exact category breakdown from PR audit logs."""
+    param_drops = 0
+    function_removals = 0
+    class_deletes = 0
+    secrets_count = 0
+    eval_count = 0
+    sql_drops_count = 0
+
+    for log in logs:
+        details = log.get("details", {})
+        ast_findings = (details.get("ast", {}).get("findings")) or []
+        sec_findings = (details.get("security", {}).get("findings")) or []
+        schema_findings = (details.get("schema", {}).get("findings")) or []
+
+        for f in ast_findings:
+            f_lower = f.lower()
+            if "parameter" in f_lower or "param" in f_lower:
+                param_drops += 1
+            elif "function" in f_lower or "method" in f_lower or "definition" in f_lower or "removed" in f_lower:
+                function_removals += 1
+            elif "class" in f_lower or "interface" in f_lower:
+                class_deletes += 1
+
+        for f in sec_findings:
+            f_lower = f.lower()
+            if "secret" in f_lower or "key" in f_lower or "token" in f_lower or "password" in f_lower:
+                secrets_count += 1
+            elif "eval" in f_lower or "exec" in f_lower:
+                eval_count += 1
+
+        if schema_findings:
+            sql_drops_count += len(schema_findings)
+        elif log.get("schema_breaking_changes"):
+            sql_drops_count += 1
+
+    return {
+        "ast_bar": [param_drops, function_removals, class_deletes],
+        "security_donut": [secrets_count, eval_count, sql_drops_count]
+    }
+
+
 @app.get("/api/logs")
 async def get_live_audit_logs():
     """Returns real-time JSON data for the dashboard auto-polling stream."""
@@ -133,14 +175,7 @@ async def get_live_audit_logs():
         "latest_event_id": logs[0]["event_id"] if logs else "None"
     }
     
-    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in logs)
-    security_secrets_total = sum(log.get("security_findings_count", 0) for log in logs)
-    schema_drops_total = sum(1 for log in logs if log.get("schema_breaking_changes"))
-
-    chart_data = {
-        "ast_bar": [ast_conflicts_total, 0, 0],
-        "security_donut": [security_secrets_total, 0, schema_drops_total]
-    }
+    chart_data = compute_chart_metrics(logs)
     
     return {
         "stats": stats,
@@ -160,14 +195,7 @@ async def render_dashboard(request: Request):
         "latest_event_id": logs[0]["event_id"] if logs else "None"
     }
     
-    ast_conflicts_total = sum(log.get("ast_conflicts_count", 0) for log in logs)
-    security_secrets_total = sum(log.get("security_findings_count", 0) for log in logs)
-    schema_drops_total = sum(1 for log in logs if log.get("schema_breaking_changes"))
-
-    chart_data = {
-        "ast_bar": [ast_conflicts_total, 0, 0],
-        "security_donut": [security_secrets_total, 0, schema_drops_total]
-    }
+    chart_data = compute_chart_metrics(logs)
     
     context = {
         "request": request,
