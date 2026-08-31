@@ -20,18 +20,29 @@
       background-color: #1a2332;
       border: 1px solid #283548;
     }
-    /* Custom Scrollbar for Drawer & Table */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    /* Agent Flow & Pulse Animations */
+    @keyframes flowDown {
+      0% { transform: translateY(-4px); opacity: 0.3; }
+      50% { opacity: 1; filter: drop-shadow(0 0 6px #22d3ee); }
+      100% { transform: translateY(4px); opacity: 0.3; }
     }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
+    .flow-arrow-1 { animation: flowDown 1.6s ease-in-out infinite; }
+    .flow-arrow-2 { animation: flowDown 1.6s ease-in-out infinite 0.4s; }
+    .flow-arrow-3 { animation: flowDown 1.6s ease-in-out infinite 0.8s; }
+
+    @keyframes agentPulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(34, 211, 238, 0); border-color: rgba(34, 211, 238, 0.3); }
+      50% { box-shadow: 0 0 14px rgba(34, 211, 238, 0.45); border-color: rgba(34, 211, 238, 0.85); transform: translateY(-2px); }
     }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
+    .agent-node-1 { animation: agentPulse 3.2s ease-in-out infinite; }
+    .agent-node-2 { animation: agentPulse 3.2s ease-in-out infinite 1.1s; }
+    .agent-node-3 { animation: agentPulse 3.2s ease-in-out infinite 2.2s; }
+
+    @keyframes orchestratorGlow {
+      0%, 100% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.2); }
+      50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
     }
+    .orchestrator-glow { animation: orchestratorGlow 4s ease-in-out infinite; }
   </style>
 </head>
 <body class="min-h-screen text-slate-800 antialiased flex flex-col justify-between relative overflow-x-hidden">
@@ -245,51 +256,67 @@
         <div>
           <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-700/60">
             <h2 class="text-sm font-bold tracking-wide text-white">Agent Utilization Breakdown</h2>
+            <span class="inline-flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-950/80 border border-emerald-700/60 px-1.5 py-0.5 rounded font-mono">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Mesh
+            </span>
           </div>
 
-          <!-- Architectural Hierarchy Diagram -->
-          <div class="flex flex-col items-center py-2 space-y-3">
+          <!-- Architectural Hierarchy Diagram (Animated) -->
+          <div class="flex flex-col items-center py-2 space-y-2.5">
             
-            <!-- Top Shield Logo -->
-            <div class="bg-white/10 border border-cyan-500/40 p-2.5 rounded-2xl shadow-inner flex items-center justify-center">
-              <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" class="h-12 w-auto object-contain rounded-lg">
+            <!-- Top Shield Logo with Breathing Halo Glow -->
+            <div class="bg-white/10 border border-cyan-400/50 p-2 rounded-2xl shadow-inner flex items-center justify-center orchestrator-glow transition hover:scale-105">
+              <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" class="h-11 w-auto object-contain rounded-lg">
             </div>
 
-            <!-- Flow Arrows -->
-            <div class="w-full flex justify-around text-cyan-400 text-xs px-2">
-              <i class="fa-solid fa-arrow-down"></i>
-              <i class="fa-solid fa-arrow-down"></i>
-              <i class="fa-solid fa-arrow-down"></i>
+            <!-- Flowing Animated Data Stream Arrows -->
+            <div class="w-full flex justify-around text-cyan-400 text-xs px-3">
+              <i class="fa-solid fa-angles-down flow-arrow-1"></i>
+              <i class="fa-solid fa-angles-down flow-arrow-2"></i>
+              <i class="fa-solid fa-angles-down flow-arrow-3"></i>
             </div>
 
-            <!-- Sub-Agents Grid -->
+            <!-- Sub-Agents Grid with Pulsing Nodes -->
             <div class="grid grid-cols-3 gap-1.5 w-full text-center">
-              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+              <div class="bg-[#102436] border border-cyan-500/40 rounded-lg p-2 agent-node-1 transition hover:bg-[#152e45]">
                 <p class="text-[10px] font-bold text-cyan-300 leading-tight">AST</p>
                 <p class="text-[9px] text-slate-400 leading-tight">Governance</p>
-                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+                <p class="text-[8px] text-emerald-400 mt-1 flex items-center justify-center gap-1 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
+                </p>
+                <p class="text-[7.5px] text-slate-400 font-mono mt-0.5">3.1ms</p>
               </div>
 
-              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+              <div class="bg-[#102436] border border-cyan-500/40 rounded-lg p-2 agent-node-2 transition hover:bg-[#152e45]">
                 <p class="text-[10px] font-bold text-cyan-300 leading-tight">Security</p>
                 <p class="text-[9px] text-slate-400 leading-tight">Audit</p>
-                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+                <p class="text-[8px] text-emerald-400 mt-1 flex items-center justify-center gap-1 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
+                </p>
+                <p class="text-[7.5px] text-slate-400 font-mono mt-0.5">2.8ms</p>
               </div>
 
-              <div class="bg-[#102436] border border-cyan-500/30 rounded-lg p-2">
+              <div class="bg-[#102436] border border-cyan-500/40 rounded-lg p-2 agent-node-3 transition hover:bg-[#152e45]">
                 <p class="text-[10px] font-bold text-cyan-300 leading-tight">Schema</p>
                 <p class="text-[9px] text-slate-400 leading-tight">Safety</p>
-                <p class="text-[8px] text-emerald-400 mt-1">Active</p>
+                <p class="text-[8px] text-emerald-400 mt-1 flex items-center justify-center gap-1 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
+                </p>
+                <p class="text-[7.5px] text-slate-400 font-mono mt-0.5">3.4ms</p>
               </div>
             </div>
 
-            <div class="text-cyan-400 text-xs pt-1">
-              <i class="fa-solid fa-arrow-down"></i>
+            <!-- Flow Arrow to Orchestrator Core -->
+            <div class="text-cyan-400 text-xs pt-0.5">
+              <i class="fa-solid fa-angles-down flow-arrow-2"></i>
             </div>
 
-            <div class="bg-[#102436] border border-cyan-500/40 rounded-lg p-2.5 w-full text-center">
-              <p class="text-[10px] font-bold text-cyan-300">PullWard Orchestrator</p>
-              <p class="text-[8px] text-emerald-400 mt-0.5">Gemini 3.6 Flash (Supervised)</p>
+            <!-- Orchestrator Node with Halo -->
+            <div class="bg-[#0e2133] border border-cyan-400/50 rounded-lg p-2.5 w-full text-center orchestrator-glow transition hover:scale-[1.02]">
+              <p class="text-[10px] font-bold text-cyan-300 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-microchip text-cyan-400"></i> PullWard Orchestrator
+              </p>
+              <p class="text-[8px] text-emerald-400 mt-0.5 font-medium">Gemini 3.6 Flash • Supervised</p>
             </div>
 
           </div>
