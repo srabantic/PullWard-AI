@@ -180,6 +180,33 @@ def compute_chart_metrics(logs):
     }
 
 
+@app.get("/api/debug/bq")
+async def debug_bigquery():
+    """Diagnostic endpoint to verify Cloud Run BigQuery connectivity."""
+    project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+    try:
+        from google.cloud import bigquery
+        client = bigquery.Client(project=project_id)
+        query = f"SELECT count(*) as count FROM `{project_id}.pullward_audit.pr_audit_logs`"
+        query_job = client.query(query)
+        rows = list(query_job)
+        logs = fetch_recent_audit_logs()
+        return {
+            "status": "success",
+            "project_id": project_id,
+            "row_count": rows[0].count,
+            "fetched_logs_count": len(logs),
+            "sample_logs": logs[:3]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "project_id": project_id,
+            "error_type": type(e).__name__,
+            "error_message": str(e)
+        }
+
+
 @app.get("/api/logs")
 async def get_live_audit_logs():
     """Returns real-time JSON data for the dashboard auto-polling stream."""
