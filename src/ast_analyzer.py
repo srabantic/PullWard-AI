@@ -98,7 +98,10 @@ def _analyze_sql_config(old_code: str, new_code: str, lang: str) -> List[str]:
     """Checks for high-risk breaking statements in SQL and config files."""
     breaking_changes = []
     if lang == "sql":
-        drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE)\s+(\w+)', new_code, re.IGNORECASE)
+        # Strip single-line and multi-line SQL comments before searching
+        clean_code = re.sub(r'--.*$', '', new_code, flags=re.MULTILINE)
+        clean_code = re.sub(r'/\*.*?\*/', '', clean_code, flags=re.DOTALL)
+        drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE)\s+(\w+)', clean_code, re.IGNORECASE)
         for target_type, name in drops:
             breaking_changes.append(f"[SQL] High-risk breaking statement: DROP {target_type.upper()} '{name}'.")
     return breaking_changes

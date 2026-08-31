@@ -463,19 +463,26 @@
       }
     }
 
-    // 4. Filter Tabs
-    function filterTable(type) {
+    // 4. Filter Tabs & State Persistence
+    let activeFilter = 'ALL';
+
+    function applyCurrentFilter() {
       document.querySelectorAll('.pr-row').forEach(row => {
         const decision = row.getAttribute('data-decision');
-        if (type === 'ALL' || decision === type) {
+        if (activeFilter === 'ALL' || decision === activeFilter) {
           row.style.display = '';
         } else {
           row.style.display = 'none';
         }
       });
-      document.getElementById('tab-all').className = type === 'ALL' ? 'px-2 py-0.5 rounded bg-cyan-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
-      document.getElementById('tab-blocked').className = type === 'BLOCKED' ? 'px-2 py-0.5 rounded bg-rose-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
-      document.getElementById('tab-approved').className = type === 'APPROVED' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-all').className = activeFilter === 'ALL' ? 'px-2 py-0.5 rounded bg-cyan-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-blocked').className = activeFilter === 'BLOCKED' ? 'px-2 py-0.5 rounded bg-rose-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-approved').className = activeFilter === 'APPROVED' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+    }
+
+    function filterTable(type) {
+      activeFilter = type;
+      applyCurrentFilter();
     }
 
     // 5. Live Background Auto-Poller (Every 3.5 Seconds)
@@ -507,6 +514,8 @@
           tbody.innerHTML = data.logs.map((log, index) => {
             const isBlocked = log.decision === 'BLOCKED' || log.schema_breaking_changes || log.security_findings_count > 0;
             const isReview = log.decision === 'NEEDS_REVIEW' || log.ast_conflicts_count > 0;
+            const effectiveDecision = isBlocked ? 'BLOCKED' : (isReview ? 'NEEDS_REVIEW' : 'APPROVED');
+            
             const statusIcon = isBlocked 
               ? `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/20 text-rose-400"><i class="fa-solid fa-xmark text-xs"></i></span>`
               : isReview 
@@ -520,7 +529,7 @@
                 : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800">APPROVED</span>`;
 
             return `
-              <tr onclick="openPrDrawer(${index})" class="hover:bg-slate-800/80 cursor-pointer transition pr-row" data-decision="${log.decision}">
+              <tr onclick="openPrDrawer(${index})" class="hover:bg-slate-800/80 cursor-pointer transition pr-row" data-decision="${effectiveDecision}">
                 <td class="py-2.5 px-2">${statusIcon}</td>
                 <td class="py-2.5 px-2 font-mono text-slate-200 truncate max-w-[100px]">${log.repo_name}</td>
                 <td class="py-2.5 px-2 font-mono text-cyan-400">#${log.pr_number}</td>
@@ -530,6 +539,9 @@
               </tr>
             `;
           }).join('');
+          
+          // Re-apply the selected tab filter after rendering new rows!
+          applyCurrentFilter();
         }
       } catch (err) {
         console.error('Auto-poll error:', err);

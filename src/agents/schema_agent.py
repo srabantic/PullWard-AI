@@ -13,16 +13,22 @@ class SchemaAgent:
     def run(self, diff_text: str, diff_files: List[Dict[str, str]] = None) -> Dict[str, Any]:
         findings = []
 
+        # Helper to strip SQL comments
+        def clean_sql(text: str) -> str:
+            text = re.sub(r'--.*$', '', text, flags=re.MULTILINE)
+            return re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
+
         # 1. Per-file SQL / Schema destruction check
         if diff_files:
             for f in diff_files:
                 filename = f.get("filename", "schema.sql")
-                code_to_check = f.get("new_code", "")
+                code_to_check = clean_sql(f.get("new_code", ""))
                 destructive_drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE|INDEX)\s+(\w+)', code_to_check, re.IGNORECASE)
                 for target_type, target_name in destructive_drops:
                     findings.append(f"`{filename}`: [SCHEMA BREAK] Destructive statement detected: DROP {target_type.upper()} '{target_name}'")
         else:
-            destructive_drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE|INDEX)\s+(\w+)', diff_text, re.IGNORECASE)
+            cleaned_diff = clean_sql(diff_text)
+            destructive_drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE|INDEX)\s+(\w+)', cleaned_diff, re.IGNORECASE)
             for target_type, target_name in destructive_drops:
                 findings.append(f"[SCHEMA BREAK] Destructive statement detected: DROP {target_type.upper()} '{target_name}'")
 
