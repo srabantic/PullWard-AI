@@ -19,6 +19,7 @@ def log_pr_audit_event(
     """
     if not project_id:
         project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+    project_id = str(project_id).strip()
 
     event_id = str(uuid.uuid4())
     row_to_insert = {
@@ -58,6 +59,7 @@ def fetch_recent_audit_logs(project_id: str = None, limit: int = 50) -> list:
     """
     if not project_id:
         project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+    project_id = str(project_id).strip()
 
     try:
         client = bigquery.Client(project=project_id)

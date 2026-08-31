@@ -183,7 +183,7 @@ def compute_chart_metrics(logs):
 @app.get("/api/debug/bq")
 async def debug_bigquery():
     """Diagnostic endpoint to verify Cloud Run BigQuery connectivity."""
-    project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+    project_id = (os.getenv("GCP_PROJECT_ID") or "pullward-ai").strip()
     try:
         from google.cloud import bigquery
         client = bigquery.Client(project=project_id)
