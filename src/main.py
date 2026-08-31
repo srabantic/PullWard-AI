@@ -113,12 +113,25 @@ def health_check():
 
 
 def get_current_audit_logs():
-    """Returns in-memory logs, hydrating from BigQuery if empty."""
+    """Retrieves live in-memory logs merged with BigQuery historical records."""
     global in_memory_audit_logs
-    if not in_memory_audit_logs:
-        bq_records = fetch_recent_audit_logs(limit=50)
-        if bq_records:
-            in_memory_audit_logs.extend(bq_records)
+    bq_records = fetch_recent_audit_logs(limit=50)
+    seen_ids = set()
+    merged = []
+    
+    for log in in_memory_audit_logs:
+        eid = log.get("event_id")
+        if eid and eid not in seen_ids:
+            seen_ids.add(eid)
+            merged.append(log)
+            
+    for log in bq_records:
+        eid = log.get("event_id")
+        if eid and eid not in seen_ids:
+            seen_ids.add(eid)
+            merged.append(log)
+            
+    in_memory_audit_logs = merged
     return in_memory_audit_logs
 
 
