@@ -460,11 +460,9 @@
         plugins: { 
           legend: { display: false },
           tooltip: {
-            callbacks: {
-              afterLabel: function() {
-                return '👉 Click bar to inspect files & PRs';
-              }
-            }
+            padding: 8,
+            cornerRadius: 6,
+            bodyFont: { size: 11 }
           }
         },
         scales: {
@@ -501,11 +499,9 @@
         plugins: { 
           legend: { display: false },
           tooltip: {
-            callbacks: {
-              afterLabel: function() {
-                return '👉 Click slice to inspect files & PRs';
-              }
-            }
+            padding: 8,
+            cornerRadius: 6,
+            bodyFont: { size: 11 }
           }
         },
         cutout: '70%'
