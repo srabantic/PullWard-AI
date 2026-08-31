@@ -86,8 +86,8 @@ def fetch_recent_audit_logs(project_id: str = None, limit: int = 50) -> list:
                 "decision": decision,
                 "timestamp": ts_str,
                 "details": {
-                    "ast": {"findings": [f"AST conflicts: {row.ast_conflicts_count}"] if row.ast_conflicts_count else []},
-                    "security": {"findings": [f"Security findings: {row.security_findings_count}"] if row.security_findings_count else []},
+                    "ast": {"findings": [f"AST signature conflict detected ({row.ast_conflicts_count})"] if row.ast_conflicts_count else []},
+                    "security": {"findings": [f"Exposed secret / credential token detected ({row.security_findings_count})"] if row.security_findings_count else []},
                     "schema": {"findings": ["Destructive schema statement detected (DROP TABLE)"] if row.schema_breaking_changes else []}
                 }
             })

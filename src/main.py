@@ -146,12 +146,15 @@ def compute_chart_metrics(logs):
             elif "class" in f_lower or "interface" in f_lower:
                 class_deletes += 1
 
-        for f in sec_findings:
-            f_lower = f.lower()
-            if "secret" in f_lower or "key" in f_lower or "token" in f_lower or "password" in f_lower:
-                secrets_count += 1
-            elif "eval" in f_lower or "exec" in f_lower:
-                eval_count += 1
+        if sec_findings:
+            for f in sec_findings:
+                f_lower = f.lower()
+                if "eval" in f_lower or "exec" in f_lower or "dynamic" in f_lower:
+                    eval_count += 1
+                else:
+                    secrets_count += 1
+        elif log.get("security_findings_count", 0) > 0:
+            secrets_count += log.get("security_findings_count", 0)
 
         if schema_findings:
             sql_drops_count += len(schema_findings)

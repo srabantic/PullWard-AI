@@ -242,9 +242,9 @@
                 <canvas id="securityDonutChart"></canvas>
               </div>
               <div class="text-[11px] text-slate-300 space-y-1.5 font-medium pr-2">
-                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Secrets</div>
-                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> eval() Calls</div>
-                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> SQL Drops</div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-xs"></span> Secrets</div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-xs"></span> eval() Calls</div>
+                <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-xs"></span> SQL Drops</div>
               </div>
             </div>
           </div>
@@ -481,7 +481,7 @@
         labels: ['Secrets', 'eval()', 'SQL Drops'],
         datasets: [{
           data: {{ chart_data.security_donut | tojson if chart_data else [0, 0, 0] }},
-          backgroundColor: ['#3b82f6', '#22d3ee', '#64748b'],
+          backgroundColor: ['#3b82f6', '#06b6d4', '#f59e0b'],
           borderWidth: 0
         }]
       },
