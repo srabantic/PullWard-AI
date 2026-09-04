@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import time
 import hmac
 import hashlib
 import httpx
@@ -112,10 +113,21 @@ def health_check():
     return {"status": "ok"}
 
 
+last_bq_fetch_time = 0
+cached_bq_records = []
+
 def get_current_audit_logs():
-    """Retrieves live in-memory logs merged with BigQuery historical records."""
-    global in_memory_audit_logs
-    bq_records = fetch_recent_audit_logs(limit=50)
+    """Retrieves live in-memory logs merged with BigQuery historical records with smart 5s TTL caching."""
+    global in_memory_audit_logs, last_bq_fetch_time, cached_bq_records
+    current_time = time.time()
+    
+    # Query BigQuery at most once every 5 seconds to guarantee instant sub-10ms response times
+    if current_time - last_bq_fetch_time > 5 or not cached_bq_records:
+        fresh_records = fetch_recent_audit_logs(limit=50)
+        if fresh_records:
+            cached_bq_records = fresh_records
+        last_bq_fetch_time = current_time
+        
     seen_ids = set()
     merged = []
     
@@ -125,7 +137,7 @@ def get_current_audit_logs():
             seen_ids.add(eid)
             merged.append(log)
             
-    for log in bq_records:
+    for log in cached_bq_records:
         eid = log.get("event_id")
         if eid and eid not in seen_ids:
             seen_ids.add(eid)
