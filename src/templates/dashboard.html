@@ -52,12 +52,13 @@
     <div class="flex items-center gap-3">
       <img src="/assets/logo.jpg" onerror="this.onerror=null; this.src='../../assets/logo.jpg';" alt="PullWard AI" class="h-14 w-auto object-contain">
     </div>
-    <div class="flex items-center gap-4 text-xs font-semibold text-slate-600">
+    <div class="flex items-center gap-3 text-xs font-semibold text-slate-600">
+      <button onclick="openSetupGuide()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-xs transition cursor-pointer">
+        <i class="fa-solid fa-sliders"></i> Setup Guide
+      </button>
       <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50/90 text-emerald-700 border border-emerald-300 shadow-xs">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Webhook Active
       </span>
-      <span class="text-blue-200">|</span>
-      <span class="text-slate-500 font-mono hidden sm:inline">Port: 8080</span>
     </div>
   </header>
 
@@ -428,6 +429,130 @@
 
   </aside>
 
+  <!-- Interactive Setup & Configuration Drawer -->
+  <div id="setup-backdrop" onclick="closeSetupGuide()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+  <aside id="setup-drawer" class="fixed top-0 right-0 h-full w-full max-w-xl bg-[#141d2b] border-l border-slate-700/80 text-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between">
+    
+    <!-- Drawer Header -->
+    <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-sliders"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-white">GitHub Webhook Setup Guide</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Connect any repository to PullWard AI in under 1 minute.</p>
+        </div>
+      </div>
+      <button onclick="closeSetupGuide()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition cursor-pointer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-6 overflow-y-auto space-y-6 flex-grow text-xs">
+      
+      <!-- Step 1 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">1</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Open Repository Webhook Settings</h3>
+        </div>
+        <p class="text-slate-400 ml-7 leading-relaxed">
+          Navigate to your repository on GitHub ➔ Click <strong class="text-slate-200 font-mono">Settings</strong> ➔ Click <strong class="text-slate-200 font-mono">Webhooks</strong> in the left sidebar ➔ Click <strong class="text-slate-200 font-mono">Add webhook</strong>.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">2</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Set Payload URL</h3>
+        </div>
+        <div class="ml-7 space-y-1.5">
+          <p class="text-slate-400">Copy this live webhook endpoint URL and paste it into the <strong>Payload URL</strong> field:</p>
+          <div class="flex items-center gap-2">
+            <input id="setup-webhook-url" readonly type="text" value="https://pullward-ai-346005022689.northamerica-northeast2.run.app/webhook" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-cyan-300 font-mono text-xs w-full select-all focus:outline-none focus:border-cyan-500">
+            <button onclick="copySetupUrl()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg shrink-0 flex items-center gap-1.5 transition cursor-pointer">
+              <i class="fa-solid fa-copy"></i> <span id="copy-url-text">Copy</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">3</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Select Content Type</h3>
+        </div>
+        <p class="text-slate-400 ml-7 leading-relaxed">
+          In the <strong>Content type</strong> dropdown, select <span class="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-xs border border-slate-700">application/json</span>.
+        </p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">4</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Webhook Secret (Optional)</h3>
+        </div>
+        <div class="ml-7 space-y-2">
+          <p class="text-slate-400 leading-relaxed">
+            Leave the <strong class="text-slate-200">Secret</strong> field <span class="text-cyan-300 font-semibold">blank</span> on GitHub. PullWard AI supports open testing mode so anyone can test their repository instantly without needing a secret.
+          </p>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/60 text-emerald-300 font-medium text-[11px] border border-emerald-800/80">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i> Open Testing Enabled: No secret required
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">5</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Choose Trigger Events</h3>
+        </div>
+        <p class="text-slate-400 ml-7 leading-relaxed">
+          Under <em>"Which events would you like to trigger this webhook?"</em>, choose <strong>"Let me select individual events"</strong> and check <strong class="text-emerald-400">☑ Pull requests</strong> (uncheck Pushes).
+        </p>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500 text-slate-950 font-bold flex items-center justify-center text-[11px]">6</span>
+          <h3 class="font-semibold text-slate-200 text-sm">Save Webhook</h3>
+        </div>
+        <p class="text-slate-400 ml-7 leading-relaxed">
+          Ensure <strong>Active</strong> is checked, and click <strong class="text-white">Add webhook</strong>. PullWard AI will now automatically audit all Pull Requests!
+        </p>
+      </div>
+
+      <!-- How it works box -->
+      <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+        <div class="flex items-center gap-2 text-cyan-400 font-semibold">
+          <i class="fa-solid fa-circle-info"></i> How PullWard AI Works
+        </div>
+        <ul class="text-slate-400 space-y-1.5 ml-4 list-disc text-[11px] leading-relaxed">
+          <li><strong class="text-slate-300">Polyglot AST Static Analysis:</strong> Detects removed functions and deleted parameters.</li>
+          <li><strong class="text-slate-300">Security Audit Agent:</strong> Scans diffs for exposed API keys and dangerous execution calls.</li>
+          <li><strong class="text-slate-300">Schema Safety Agent:</strong> Blocks destructive database drops (<code class="text-rose-400">DROP TABLE</code>).</li>
+          <li><strong class="text-slate-300">Autonomous Verdict & Comments:</strong> Posts governance summaries back to GitHub PRs and logs to BigQuery.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="p-6 border-t border-slate-800 bg-[#0f1724] flex items-center justify-end">
+      <button onclick="closeSetupGuide()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
+        Done
+      </button>
+    </div>
+
+  </aside>
+
   <!-- Live Dynamic Chart.js & Auto-Poller Script -->
   <script>
     let currentLogs = {{ logs | tojson if logs else [] }};
@@ -718,6 +843,29 @@
         console.error('Auto-poll error:', err);
       }
     }, 3500);
+
+    // 6. Setup Guide Drawer Controls & Copy Helpers
+    function openSetupGuide() {
+      const urlInput = document.getElementById('setup-webhook-url');
+      if (urlInput && window.location.origin && window.location.origin !== 'null') {
+        urlInput.value = window.location.origin + '/webhook';
+      }
+      document.getElementById('setup-backdrop').classList.remove('hidden');
+      document.getElementById('setup-drawer').classList.remove('translate-x-full');
+    }
+
+    function closeSetupGuide() {
+      document.getElementById('setup-backdrop').classList.add('hidden');
+      document.getElementById('setup-drawer').classList.add('translate-x-full');
+    }
+
+    function copySetupUrl() {
+      const urlInput = document.getElementById('setup-webhook-url');
+      navigator.clipboard.writeText(urlInput.value);
+      const textSpan = document.getElementById('copy-url-text');
+      textSpan.innerText = 'Copied!';
+      setTimeout(() => { textSpan.innerText = 'Copy'; }, 2000);
+    }
   </script>
 
 </body>

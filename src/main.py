@@ -5,6 +5,7 @@ import time
 import hmac
 import hashlib
 import httpx
+import asyncio
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +33,25 @@ templates = Jinja2Templates(directory=templates_path)
 
 # Live audit logs store for real-time dashboard visualization
 in_memory_audit_logs = []
+cached_bq_records = []
+
+async def background_bq_sync():
+    """Continuously keeps BigQuery records synced in memory in the background so dashboard requests never block."""
+    global cached_bq_records
+    while True:
+        try:
+            records = await asyncio.to_thread(fetch_recent_audit_logs, limit=50)
+            if records is not None:
+                cached_bq_records = records
+        except Exception as e:
+            print(f"[BACKGROUND BQ SYNC] Non-blocking sync notice: {e}")
+        # Sync every 5 seconds in background
+        await asyncio.sleep(5)
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-warms the cache and launches background BigQuery synchronizer immediately on container boot."""
+    asyncio.create_task(background_bq_sync())
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
@@ -113,38 +133,37 @@ def health_check():
     return {"status": "ok"}
 
 
-last_bq_fetch_time = 0
-cached_bq_records = []
-
 def get_current_audit_logs():
-    """Retrieves live in-memory logs merged with BigQuery historical records with smart 5s TTL caching."""
-    global in_memory_audit_logs, last_bq_fetch_time, cached_bq_records
-    current_time = time.time()
-    
-    # Query BigQuery at most once every 5 seconds to guarantee instant sub-10ms response times
-    if current_time - last_bq_fetch_time > 5 or not cached_bq_records:
-        fresh_records = fetch_recent_audit_logs(limit=50)
-        if fresh_records:
-            cached_bq_records = fresh_records
-        last_bq_fetch_time = current_time
+    """Retrieves live in-memory logs merged with BigQuery historical records instantly from RAM (<1ms)."""
+    global in_memory_audit_logs, cached_bq_records
         
     seen_ids = set()
     merged = []
     
-    for log in in_memory_audit_logs:
-        eid = log.get("event_id")
-        if eid and eid not in seen_ids:
-            seen_ids.add(eid)
-            merged.append(log)
-            
+    # 1. First include BigQuery cached records (primary source of truth)
     for log in cached_bq_records:
         eid = log.get("event_id")
         if eid and eid not in seen_ids:
             seen_ids.add(eid)
             merged.append(log)
             
-    in_memory_audit_logs = merged
-    return in_memory_audit_logs
+    # 2. Include any brand-new in-memory webhook events
+    for log in in_memory_audit_logs:
+        eid = log.get("event_id")
+        if eid and eid not in seen_ids:
+            seen_ids.add(eid)
+            merged.insert(0, log)
+            
+    return merged
+
+
+@app.get("/api/cache/clear")
+def clear_cache_and_sync():
+    """Manually flushes in-memory cache and triggers fresh BigQuery sync."""
+    global in_memory_audit_logs, cached_bq_records
+    in_memory_audit_logs = []
+    cached_bq_records = fetch_recent_audit_logs(limit=50)
+    return {"status": "cleared", "records_count": len(cached_bq_records)}
 
 
 def compute_chart_metrics(logs):

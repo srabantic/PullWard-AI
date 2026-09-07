@@ -24,6 +24,8 @@ gcloud run deploy "${SERVICE_NAME}" \
   --region "${REGION}" \
   --platform managed \
   --allow-unauthenticated \
+  --min-instances 1 \
+  --cpu-boost \
   --set-env-vars "GCP_PROJECT_ID=${PROJECT_ID}"
 
 echo "========================================================"

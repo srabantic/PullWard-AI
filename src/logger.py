@@ -4,6 +4,18 @@ from datetime import datetime, timezone
 from google.cloud import bigquery
 from typing import Dict, Any
 
+_bq_client = None
+
+def get_bigquery_client(project_id: str = None) -> bigquery.Client:
+    """Reuses a singleton BigQuery client to avoid repeated client instantiation latency."""
+    global _bq_client
+    if not project_id:
+        project_id = os.getenv("GCP_PROJECT_ID", "pullward-ai")
+    project_id = str(project_id).strip()
+    if _bq_client is None or getattr(_bq_client, "project", None) != project_id:
+        _bq_client = bigquery.Client(project=project_id)
+    return _bq_client
+
 def log_pr_audit_event(
     repo_name: str,
     pr_number: int,
@@ -34,7 +46,7 @@ def log_pr_audit_event(
     }
 
     try:
-        client = bigquery.Client(project=project_id)
+        client = get_bigquery_client(project_id)
         dataset_id = f"{project_id}.pullward_audit"
         table_id = f"{dataset_id}.pr_audit_logs"
 
@@ -62,7 +74,7 @@ def fetch_recent_audit_logs(project_id: str = None, limit: int = 50) -> list:
     project_id = str(project_id).strip()
 
     try:
-        client = bigquery.Client(project=project_id)
+        client = get_bigquery_client(project_id)
         query = f"""
             SELECT event_id, repo_name, pr_number, author, ast_conflicts_count, 
                    security_findings_count, schema_breaking_changes, timestamp
