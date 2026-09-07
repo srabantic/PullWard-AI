@@ -159,7 +159,8 @@
             <div class="flex items-center gap-1 text-[10px] font-semibold bg-slate-900/90 p-0.5 rounded-lg border border-slate-700">
               <button onclick="filterTable('ALL')" id="tab-all" class="px-2 py-0.5 rounded bg-cyan-600 text-white transition">All</button>
               <button onclick="filterTable('BLOCKED')" id="tab-blocked" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Blocked</button>
-              <button onclick="filterTable('APPROVED')" id="tab-approved" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Passed</button>
+              <button onclick="filterTable('NEEDS_REVIEW')" id="tab-needs-review" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Needs Review</button>
+              <button onclick="filterTable('APPROVED')" id="tab-approved" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">Approved</button>
             </div>
           </div>
 
@@ -773,6 +774,7 @@
       });
       document.getElementById('tab-all').className = activeFilter === 'ALL' ? 'px-2 py-0.5 rounded bg-cyan-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
       document.getElementById('tab-blocked').className = activeFilter === 'BLOCKED' ? 'px-2 py-0.5 rounded bg-rose-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('tab-needs-review').className = activeFilter === 'NEEDS_REVIEW' ? 'px-2 py-0.5 rounded bg-amber-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
       document.getElementById('tab-approved').className = activeFilter === 'APPROVED' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
     }
 

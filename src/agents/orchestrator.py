@@ -75,6 +75,8 @@ class PullWardOrchestrator:
             for f in schema_result["findings"]:
                 comment_markdown += f"* {f}\n"
             comment_markdown += f"\n*Schema Agent Summary:* {schema_result['summary']}\n\n"
+        else:
+            comment_markdown += "✅ **Schema Safety**: No destructive database migrations or schema drops detected.\n\n"
 
         return {
             "decision": decision,
