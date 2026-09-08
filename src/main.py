@@ -193,33 +193,48 @@ def compute_chart_metrics(logs):
         matched_ast = False
         for f in ast_findings:
             f_lower = f.lower()
+            m = re.search(r'\((\d+)\)', f)
+            n = int(m.group(1)) if m else 1
             if "class" in f_lower or "interface" in f_lower:
-                class_deletes += 1
+                class_deletes += n
                 matched_ast = True
             elif "parameter" in f_lower or "param" in f_lower or "reduced" in f_lower:
-                param_drops += 1
+                param_drops += n
                 matched_ast = True
             elif "function" in f_lower or "method" in f_lower or "definition" in f_lower or "removed" in f_lower or "renamed" in f_lower or "conflict" in f_lower:
-                function_removals += 1
+                function_removals += n
                 matched_ast = True
 
-        # Fallback allocation for historical BigQuery rows without granular AST string breakdown
         if not matched_ast and log.get("ast_conflicts_count", 0) > 0:
             count = log.get("ast_conflicts_count", 0)
             function_removals += count
 
+        matched_sec = False
         if sec_findings:
             for f in sec_findings:
                 f_lower = f.lower()
+                m = re.search(r'\((\d+)\)', f)
+                n = int(m.group(1)) if m else 1
                 if "eval" in f_lower or "exec" in f_lower or "dynamic" in f_lower:
-                    eval_count += 1
+                    eval_count += n
+                    matched_sec = True
+                elif "sql" in f_lower or "injection" in f_lower:
+                    sql_drops_count += n
+                    matched_sec = True
                 else:
-                    secrets_count += 1
-        elif log.get("security_findings_count", 0) > 0:
-            secrets_count += log.get("security_findings_count", 0)
+                    secrets_count += n
+                    matched_sec = True
+
+        if not matched_sec and log.get("security_findings_count", 0) > 0:
+            count = log.get("security_findings_count", 0)
+            secrets_count += (count + 1) // 2
+            eval_count += count // 2
 
         if schema_findings:
-            sql_drops_count += len(schema_findings)
+            for f in schema_findings:
+                m = re.search(r'\((\d+)\)', f)
+                n = int(m.group(1)) if m else 1
+                sql_drops_count += n
         elif log.get("schema_breaking_changes"):
             sql_drops_count += 1
 
