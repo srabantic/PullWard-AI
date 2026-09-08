@@ -2,18 +2,14 @@ import ast
 import re
 from typing import Dict, List, Any
 
-# File extension mapping
+# Code file extension mapping (AST & Contract analysis)
 LANGUAGE_MAP = {
     ".py": "python",
     ".cs": "csharp",
     ".ts": "typescript",
     ".js": "javascript",
     ".java": "java",
-    ".go": "go",
-    ".sql": "sql",
-    ".json": "config",
-    ".yaml": "config",
-    ".yml": "config"
+    ".go": "go"
 }
 
 class PythonASTVisitor(ast.NodeVisitor):
@@ -118,21 +114,8 @@ def _analyze_regex_signatures(old_code: str, new_code: str, lang: str) -> List[s
     return breaking_changes
 
 
-def _analyze_sql_config(old_code: str, new_code: str, lang: str) -> List[str]:
-    """Checks for high-risk breaking statements in SQL and config files."""
-    breaking_changes = []
-    if lang == "sql":
-        # Strip single-line and multi-line SQL comments before searching
-        clean_code = re.sub(r'--.*$', '', new_code, flags=re.MULTILINE)
-        clean_code = re.sub(r'/\*.*?\*/', '', clean_code, flags=re.DOTALL)
-        drops = re.findall(r'DROP\s+(TABLE|COLUMN|DATABASE)\s+(\w+)', clean_code, re.IGNORECASE)
-        for target_type, name in drops:
-            breaking_changes.append(f"[SQL] High-risk breaking statement: DROP {target_type.upper()} '{name}'.")
-    return breaking_changes
-
-
 def analyze_file_changes(filename: str, old_code: str, new_code: str) -> Dict[str, Any]:
-    """Universal entry point to analyze breaking changes across ANY file type."""
+    """Universal entry point to analyze breaking code contract changes across supported programming languages."""
     ext = f".{filename.split('.')[-1].lower()}" if "." in filename else ""
     lang = LANGUAGE_MAP.get(ext, "unknown")
 
@@ -146,7 +129,7 @@ def analyze_file_changes(filename: str, old_code: str, new_code: str) -> Dict[st
     return {
         "filename": filename,
         "language": lang,
-        "valid": True,
+        "valid": lang != "unknown",
         "breaking_changes": breaking_changes,
         "conflicts_count": len(breaking_changes)
     }
@@ -156,7 +139,3 @@ if __name__ == "__main__":
     print("--- Testing Python (Async & Sync) ---")
     py_res = analyze_file_changes("service.py", "async def getUser(id, token): pass", "def getUser(id): pass")
     print(py_res)
-
-    print("\n--- Testing SQL ---")
-    sql_res = analyze_file_changes("migration.sql", "SELECT * FROM users;", "DROP TABLE users;")
-    print(sql_res)
