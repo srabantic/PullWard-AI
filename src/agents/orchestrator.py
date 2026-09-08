@@ -24,8 +24,8 @@ class PullWardOrchestrator:
     def evaluate_pull_request(self, pr_title: str, diff_text: str, diff_files: List[Dict[str, str]]) -> Dict[str, Any]:
         # 1. Execute Sub-Agents
         ast_result = self.ast_agent.run(diff_files)
-        security_result = self.security_agent.run(diff_text)
-        schema_result = self.schema_agent.run(diff_text)
+        security_result = self.security_agent.run(diff_text, diff_files)
+        schema_result = self.schema_agent.run(diff_text, diff_files)
 
         total_conflicts = ast_result["conflicts_count"]
         total_security_issues = security_result["security_findings_count"]
