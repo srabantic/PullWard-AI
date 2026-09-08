@@ -351,7 +351,8 @@ async def github_webhook(
         author=author,
         ast_conflicts_count=gov_result["ast_conflicts_count"],
         security_findings_count=gov_result["security_findings_count"],
-        schema_breaking_changes=gov_result["schema_breaking_changes"]
+        schema_breaking_changes=gov_result["schema_breaking_changes"],
+        details=gov_result.get("details", {})
     )
 
     # Record log entry in-memory for the live UI dashboard stream

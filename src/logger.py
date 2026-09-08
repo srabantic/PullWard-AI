@@ -16,6 +16,8 @@ def get_bigquery_client(project_id: str = None) -> bigquery.Client:
         _bq_client = bigquery.Client(project=project_id)
     return _bq_client
 
+import json
+
 def log_pr_audit_event(
     repo_name: str,
     pr_number: int,
@@ -23,6 +25,7 @@ def log_pr_audit_event(
     ast_conflicts_count: int,
     security_findings_count: int,
     schema_breaking_changes: bool,
+    details: Dict[str, Any] = None,
     project_id: str = None
 ) -> Dict[str, Any]:
     """
@@ -50,7 +53,7 @@ def log_pr_audit_event(
         dataset_id = f"{project_id}.pullward_audit"
         table_id = f"{dataset_id}.pr_audit_logs"
 
-        errors = client.insert_rows_json(table_id, [row_to_insert])
+        errors = client.insert_rows_json(table_id, [row_to_insert], ignore_unknown_values=True)
 
         if not errors:
             print(f"Successfully streamed audit log for PR #{pr_number} in {repo_name} to BigQuery.")
