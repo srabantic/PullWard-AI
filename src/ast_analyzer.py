@@ -142,8 +142,6 @@ def analyze_file_changes(filename: str, old_code: str, new_code: str) -> Dict[st
         breaking_changes = _analyze_python(old_code, new_code)
     elif lang in ["csharp", "typescript", "javascript", "java", "go"]:
         breaking_changes = _analyze_regex_signatures(old_code, new_code, lang)
-    elif lang in ["sql", "config"]:
-        breaking_changes = _analyze_sql_config(old_code, new_code, lang)
 
     return {
         "filename": filename,
