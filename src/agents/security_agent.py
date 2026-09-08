@@ -4,10 +4,12 @@ from typing import Dict, Any, List
 from google.genai import Client
 
 SECRET_PATTERNS = [
-    (r'(?i)(api_key|apikey|secret|password|passwd|private_key)\s*=\s*["\'][A-Za-z0-9_\-]{8,}["\']', "Potential Hardcoded Secret/Key"),
-    (r'-----BEGIN (RSA|PRIVATE|OPENSSH) KEY-----', "Exposed Private Key Block"),
-    (r'(?i)AIzaSy[A-Za-z0-9_\-]{33}', "Exposed Google API Key"),
-    (r'(?i)ghp_[A-Za-z0-9]{36}', "Exposed GitHub Personal Access Token"),
+    (r'(?i)[\w]*(?:api_?key|secret|password|passwd|token|auth|credential)[\w]*\s*=\s*["\'][A-Za-z0-9_\-]{8,}["\']', "Potential Hardcoded Secret/Key"),
+    (r'-----BEGIN (?:RSA |OPENSSH |EC |DSA |ENCRYPTED )?PRIVATE KEY-----', "Exposed Private Key Block"),
+    (r'AIza[0-9A-Za-z-_]{20,}', "Exposed Google API Key"),
+    (r'gh[pousr]_[A-Za-z0-9]{20,}', "Exposed GitHub Token"),
+    (r'sk_live_[0-9a-zA-Z]{15,}', "Exposed Stripe Secret Key"),
+    (r'Bearer\s+[A-Za-z0-9\-._~+/]+=*', "Exposed Bearer Authorization Token"),
 ]
 
 DANGEROUS_CALLS = [
