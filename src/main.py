@@ -137,22 +137,31 @@ def get_current_audit_logs():
     """Retrieves live in-memory logs merged with BigQuery historical records instantly from RAM (<1ms)."""
     global in_memory_audit_logs, cached_bq_records
         
+    # Build a lookup map of rich findings from in-memory records
+    rich_details_map = {
+        log["event_id"]: log.get("details") 
+        for log in in_memory_audit_logs 
+        if log.get("event_id") and log.get("details")
+    }
+
     seen_ids = set()
     merged = []
     
-    # 1. First include BigQuery cached records (primary source of truth)
-    for log in cached_bq_records:
-        eid = log.get("event_id")
-        if eid and eid not in seen_ids:
-            seen_ids.add(eid)
-            merged.append(log)
-            
-    # 2. Include any brand-new in-memory webhook events
+    # 1. Include in-memory events first (richest information)
     for log in in_memory_audit_logs:
         eid = log.get("event_id")
         if eid and eid not in seen_ids:
             seen_ids.add(eid)
-            merged.insert(0, log)
+            merged.append(log)
+
+    # 2. Include BigQuery records, enriching them with rich finding details
+    for log in cached_bq_records:
+        eid = log.get("event_id")
+        if eid and eid not in seen_ids:
+            seen_ids.add(eid)
+            if eid in rich_details_map and rich_details_map[eid]:
+                log["details"] = rich_details_map[eid]
+            merged.append(log)
             
     return merged
 
