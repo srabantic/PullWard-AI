@@ -181,14 +181,23 @@ def compute_chart_metrics(logs):
         sec_findings = (details.get("security", {}).get("findings")) or []
         schema_findings = (details.get("schema", {}).get("findings")) or []
 
+        matched_ast = False
         for f in ast_findings:
             f_lower = f.lower()
-            if "parameter" in f_lower or "param" in f_lower:
-                param_drops += 1
-            elif "function" in f_lower or "method" in f_lower or "definition" in f_lower or "removed" in f_lower:
-                function_removals += 1
-            elif "class" in f_lower or "interface" in f_lower:
+            if "class" in f_lower or "interface" in f_lower:
                 class_deletes += 1
+                matched_ast = True
+            elif "parameter" in f_lower or "param" in f_lower or "reduced" in f_lower:
+                param_drops += 1
+                matched_ast = True
+            elif "function" in f_lower or "method" in f_lower or "definition" in f_lower or "removed" in f_lower or "renamed" in f_lower or "conflict" in f_lower:
+                function_removals += 1
+                matched_ast = True
+
+        # Fallback allocation for historical BigQuery rows without granular AST string breakdown
+        if not matched_ast and log.get("ast_conflicts_count", 0) > 0:
+            count = log.get("ast_conflicts_count", 0)
+            function_removals += count
 
         if sec_findings:
             for f in sec_findings:

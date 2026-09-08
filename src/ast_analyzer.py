@@ -37,12 +37,17 @@ class PythonASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+import textwrap
+
 def _analyze_python(old_code: str, new_code: str) -> List[str]:
     breaking_changes = []
 
     try:
-        old_tree = ast.parse(old_code)
-        new_tree = ast.parse(new_code)
+        # Dedent code snippets so indented diff blocks parse cleanly
+        old_clean = textwrap.dedent(old_code)
+        new_clean = textwrap.dedent(new_code)
+        old_tree = ast.parse(old_clean)
+        new_tree = ast.parse(new_clean)
 
         old_vis, new_vis = PythonASTVisitor(), PythonASTVisitor()
         old_vis.visit(old_tree)
@@ -60,8 +65,8 @@ def _analyze_python(old_code: str, new_code: str) -> List[str]:
             if cls not in new_vis.classes:
                 breaking_changes.append(f"Class '{cls}' was removed.")
 
-    except SyntaxError:
-        # Fallback to regex analysis if git diff chunk is a partial file snippet
+    except (SyntaxError, IndentationError):
+        # Fallback to robust regex analysis if git diff chunk is a partial snippet
         breaking_changes = _analyze_regex_signatures(old_code, new_code, "python")
 
     return breaking_changes
@@ -71,6 +76,27 @@ def _analyze_regex_signatures(old_code: str, new_code: str, lang: str) -> List[s
     """Parses structural method/class definitions for C#, TS, JS, Java, Go, Python snippets."""
     breaking_changes = []
     
+    # 1. Class removal check
+    class_pattern = r'\bclass\s+(\w+)'
+    old_classes = set(re.findall(class_pattern, old_code))
+    new_classes = set(re.findall(class_pattern, new_code))
+    for cls in (old_classes - new_classes):
+        breaking_changes.append(f"[{lang.upper()}] Class '{cls}' was removed.")
+
+    # 2. Function / Method parameter reduction check
+    func_param_pattern = r'(?:def|function|func)\s+(\w+)\s*\((.*?)\)'
+    old_funcs = dict(re.findall(func_param_pattern, old_code))
+    new_funcs = dict(re.findall(func_param_pattern, new_code))
+    for func, old_param_str in old_funcs.items():
+        if func not in new_funcs:
+            breaking_changes.append(f"[{lang.upper()}] Function '{func}' was removed.")
+        else:
+            old_params = [p.strip() for p in old_param_str.split(',') if p.strip()]
+            new_params = [p.strip() for p in new_funcs[func].split(',') if p.strip()]
+            if len(new_params) < len(old_params):
+                breaking_changes.append(f"[{lang.upper()}] Function '{func}' reduced parameter list from {old_params} to {new_params}.")
+
+    # 3. Signature removal check
     patterns = {
         "python": r'(?:async\s+)?def\s+(\w+)\s*\(',
         "csharp": r'(?:public|private|protected|internal)\b.*?\b(\w+)\s*\(',
@@ -81,15 +107,13 @@ def _analyze_regex_signatures(old_code: str, new_code: str, lang: str) -> List[s
     }
 
     pattern = patterns.get(lang)
-    if not pattern:
-        return []
-
-    old_symbols = set(re.findall(pattern, old_code))
-    new_symbols = set(re.findall(pattern, new_code))
-
-    removed = old_symbols - new_symbols
-    for sym in removed:
-        breaking_changes.append(f"[{lang.upper()}] Definition '{sym}' was removed or renamed.")
+    if pattern:
+        old_symbols = set(re.findall(pattern, old_code))
+        new_symbols = set(re.findall(pattern, new_code))
+        removed = old_symbols - new_symbols
+        for sym in removed:
+            if not any(sym in b for b in breaking_changes):
+                breaking_changes.append(f"[{lang.upper()}] Definition '{sym}' was removed or renamed.")
 
     return breaking_changes
 
