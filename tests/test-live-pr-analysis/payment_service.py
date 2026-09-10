@@ -1,22 +1,16 @@
 """
-Payment Service Module (Base Version on main)
+Payment Service Module (Modified Version in test branch)
 """
 
-class PaymentGateway:
-    """Core payment gateway interface."""
-    def connect(self, api_key: str):
-        pass
-
+# ❌ 1. DELETED CLASS: PaymentGateway was completely removed!
 
 class TransactionService:
     """Handles payments and refunds."""
     
-    def process_payment(self, user_id: str, amount: float, currency: str, auth_token: str):
+    # ❌ 2. REDUCED PARAMETERS: Dropped 'currency' and 'auth_token'
+    def process_payment(self, user_id: str, amount: float):
         """Processes customer payments."""
-        print(f"Processing {amount} {currency} for user {user_id}")
+        print(f"Processing {amount} for user {user_id}")
         return True
 
-    def refund_transaction(self, transaction_id: str, reason: str):
-        """Processes refunds."""
-        print(f"Refunding {transaction_id}: {reason}")
-        return True
+    # ❌ 3. REMOVED FUNCTION: refund_transaction was completely deleted!
